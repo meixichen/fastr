@@ -4,12 +4,17 @@
 \name{mnfa-package}
 \alias{mnfa}
 \alias{mnfa-package}
-\title{mnfa: What the Package Does (One Line, Title Case)}
+\title{mnfa: Multi-Neuron Factor Analysis}
 \description{
 What the package does (one paragraph).
 }
 \author{
-\strong{Maintainer}: First Last \email{first.last@example.com} (\href{https://orcid.org/YOUR-ORCID-ID}{ORCID})
+\strong{Maintainer}: Meixi Chen \email{meixi.chen@uwaterloo.ca}
+
+Authors:
+\itemize{
+  \item Martin Lysy
+}
 
 }
 \keyword{internal}

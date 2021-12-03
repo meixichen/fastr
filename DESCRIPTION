@@ -1,12 +1,14 @@
-Package: test
-Title: What the Package Does (One Line, Title Case)
+Package: mnfa
+Title: Multi-Neuron Factor Analysis
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    c(person(given = "Meixi",
+           family = "Chen",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+	   email = "meixi.chen@uwaterloo.ca"),
+      person(given = "Martin",
+             family = "Lysy",
+	     role = "aut"))
 Description: What the package does (one paragraph).
 License: GPL (>= 2)
 Encoding: UTF-8
