@@ -1,5 +1,5 @@
 #' Compute the negative log-likelihood of the factor model in R
-#' @param data A list of a 3d data array `Y`, penalization parameter `lam`, and num of factors `n_factor`.
+#' @param data A list of a 3d data array `Y`, penalization parameter `lam`, time bin size `dt`, and num of factors `n_factor`.
 #' @param param_list A list of parameters including vector `log_k`, vector `log_a`, 3d array `x` (latent paths), 
 #' and vector `Lt` (unnormalized lower tri elements of loading matrix)
 #' @return Scalar of negative log-likelihood
@@ -17,6 +17,7 @@ compute_Rnll <- function(data, param_list){
   n_factor <- data$n_factor
   Y <- data$Y
   lam <- data$lam
+  dt <- data$dt
   #----- fill in the covariance matrix for latent increments -----
   L <- matrix(0, nrow=n_cell, ncol=n_factor) # loading matrix
   psi <- rep(0, n_cell) # diagonal of uniqueness matrix
