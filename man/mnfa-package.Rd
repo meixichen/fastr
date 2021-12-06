@@ -6,7 +6,7 @@
 \alias{mnfa-package}
 \title{mnfa: Multi-Neuron Factor Analysis}
 \description{
-What the package does (one paragraph).
+This package provides an efficient implementation of a latent factor model for analyzing spike trains recorded from multiple neurons. Quantities of interest in this model are those that charaterize individual neuron's spiking intensity and those that represent the correlation among simultaneously recorded neurons.
 }
 \author{
 \strong{Maintainer}: Meixi Chen \email{meixi.chen@uwaterloo.ca}
