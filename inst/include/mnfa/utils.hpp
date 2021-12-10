@@ -80,41 +80,6 @@ namespace mnfa {
     return;
   }
 
-  /// Compute the variance matrix for the latent path increment.
-  ///
-  /// @param[out] Sig Matrix into which to store the output. Sig = LL' + uniqueness so that diag(Sig)=1.
-  /// @param[in] Lt dq-d(d-1)/2 vector of the lower triangular elements of L (by column).
-  /// @param[in] n_cell Number of cells.
-  /// @param[in] n_factor Number of neurons.
-  template <class Type>
-  inline void create_Sig(RefMatrix_t<Type> Sig, cRefVector_t<Type>& Lt,
-			 int n_cell, int n_factor) {
-    matrix<Type> L(n_cell, n_factor); // loading matrix
-    matrix<Type> Psi(n_cell, n_cell); // error term cov matrix
-    int indx=0;
-    int i,j;
-    L.setIdentity();
-    Psi.setIdentity();
-    for (j=0;j<n_factor;j++){ // column
-      for (i=j;i<n_cell;i++){ // row
-        L(i,j) = Lt(indx++);
-      }
-    }
-    
-    for (i=0;i<n_cell;i++){
-      Type norm2 = Psi(i,i);
-      for (j=0;j<n_factor;j++){
-        norm2 += L(i,j) * L(i,j);
-      }
-      Psi(i,i) = Psi(i,i)/norm2;
-      for (j=0;j<n_factor;j++){
-        L(i,j) /= sqrt(norm2);
-      }
-    }
-    
-    Sig = L * L.transpose() + Psi;
-    return;
-  }
   
   /// Get the lower triangular elements (by column) of a correlation matrix as a vector.
   ///
