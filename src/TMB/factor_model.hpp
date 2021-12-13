@@ -36,10 +36,9 @@ Type factor_model(objective_function<Type>* obj){
   vector<Type> rho(n_cell*(n_cell-1)/2); // vector of lower triangular elements of the Sig
   SigmaFA<Type> Sig_FA(n_cell, n_factor);
   Sig_FA.create(Sig, Lt);
-  // create_Sig<Type>(Sig, Lt, n_cell, n_factor); 
   Sig2rho<Type>(rho, Sig, n_cell);
   ADREPORT(rho);
-  
+
   // negative log-likelihood computation
   MVNORM_t<Type> latent_nll(Sig*dt); // MVN distn for the increments of latent path x
   vector<Type> reg = Lt*Lt; // l2 (ridge) regularization 
