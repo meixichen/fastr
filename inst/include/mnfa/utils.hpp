@@ -161,23 +161,22 @@ namespace mnfa {
     Matrix_t<Type> Omega(n_factor_, n_factor_); // Omega = I + L' iPsi L
     Matrix_t<Type> iOmega(n_factor_, n_factor_); // inverse of Omega
     Matrix_t<Type> iPsi(n_cell_, n_cell_); // inverse of Psi
+    Matrix_t<Type> PLOLP(n_cell_, n_cell_); // PLOLP = iPsi*L*iOmega*Lt*iPsi. Q=iPsi-PLOLP.
     Matrix_t<Type> I_k(n_factor_, n_factor_);
-    Matrix_t<Type> I_q(n_cell_, n_cell_);
     
     I_k.setIdentity();
-    I_q.setIdentity();
     iPsi = ipsi_.asDiagonal();
     Omega.noalias() = L_.transpose() * iPsi * L_; 
     Omega += I_k;
     
     // matrix decomposition
     Eigen::LDLT<Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> > ldlt(Omega);
-    iOmega = ldlt.solve(I_q);
+    iOmega = ldlt.solve(I_k);
     Vector_t<Type> Omega_D = ldlt.vectorD();
 
     logdetS_ = Omega_D.array().log().sum() + psi_.array().log().sum(); // log|Omega| + log|Psi|
-    Q_ = iPsi;
-    Q_.noalias() -= iPsi * L_ * iOmega * L_.transpose() * iPsi; // compute inverse Sigma
+    PLOLP = iPsi * L_ * iOmega * L_.transpose() * iPsi; 
+    Q_ = iPsi - PLOLP;
   }
 
   /// Calculate the quadratic component of the MVN density.
@@ -185,14 +184,14 @@ namespace mnfa {
   template <class Type>
   inline Type MVN_FA<Type>::xQx(Vector_t<Type> x){
     Vector_t<Type> Qx = Q_ * x;
-    return (x * Qx).sum();
+    return x.dot(Qx);
   }
   
   /// Evaluate the negative log density of a zero-mean MVN with cov matrix Sigma=LL'+Psi.
   /// @param[in] x Vector of length `n_cell` to be evaluated at.
   template <class Type>
   inline Type MVN_FA<Type>::operator()(Vector_t<Type> x){
-    return Type(0.5)*logdetS_ + Type(0.5)*n_cell_*log(scale_) + Type(0.5)/scale_ *xQx(x) + x.size()*Type(log(sqrt(2.0*M_PI))); // scaling by time scale is applied here
+    return Type(0.5)*logdetS_ + Type(0.5)* x.size() *log(scale_) + Type(0.5)/scale_ *xQx(x) + x.size()*Type(log(sqrt(2.0*M_PI))); // scaling by time scale is applied here
   }
 
   /// Get the lower triangular elements (by column) of a correlation matrix as a vector.
