@@ -54,8 +54,10 @@ Type factor_model_big(objective_function<Type>* obj){
       }
     }
   }
+  matrix<Type> Sig = latent_nll.cov();
+  REPORT(Sig);
   return nll;
-  
+
 }
 
 #undef TMB_OBJECTIVE_PTR

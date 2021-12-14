@@ -91,10 +91,12 @@ namespace mnfa {
     Type scale_; ///> Scale parameter multiplied by the MVN variance matrix, e.g., time scale.
     Matrix_t<Type> L_; ///> Normalized loading matrix.
     Vector_t<Type> psi_; ///> Diagonal vector of the uniqueness matrix.
+    Vector_t<Type> ipsi_; ///> Inverse of psi.
     Matrix_t<Type> Q_; ///> Inverse of MVN cov mat Sigma.
-    Type logdetQ_; ///> Log determinant of MVN Sigma.
+    Type logdetS_; ///> Log determinant of MVN Sigma.
   public:
     MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, Type scale);
+    Matrix_t<Type> cov();
     Type operator()(Vector_t<Type> x);
     Type xQx(Vector_t<Type> x);
     void setQ();
@@ -109,14 +111,24 @@ namespace mnfa {
     // memory allocation.
     L_ = Matrix_t<Type>::Zero(n_cell_, n_factor_);
     psi_ = Vector_t<Type>::Zero(n_cell_);
+    ipsi_ = Vector_t<Type>::Zero(n_cell_); 
     Q_ = Matrix_t<Type>::Zero(n_cell_, n_cell_);
     // compute quantities needed for density evaluation.
     normalize(Lt);
     setQ();
   }
 
-   /// Create normalized loading matrix and diagonal vector of the uniqueness matrix.
-   /// @param[in] Lt Vector of lower triangular elements of the computational basis of the loading matrix.
+  /// Output the covariance matrix
+  template <class Type>
+  inline Matrix_t<Type> MVN_FA<Type>::cov(){
+    Matrix_t<Type> Sig(n_cell_, n_cell_);
+    Sig.noalias() = L_ * L_.transpose();
+    Sig += psi_.asDiagonal();
+    return Sig;
+  }
+
+  /// Create normalized loading matrix and diagonal vector of the uniqueness matrix.
+  /// @param[in] Lt Vector of lower triangular elements of the computational basis of the loading matrix.
   template <class Type>
   inline void MVN_FA<Type>::normalize(cRefVector_t<Type>& Lt){
     int indx=0;
@@ -135,6 +147,7 @@ namespace mnfa {
         norm2 += L_(i,j) * L_(i,j);
       }
       psi_(i) = Type(1.0)/norm2;
+      ipsi_(i) = norm2;
       for (j=0;j<n_factor_;j++){
         L_(i,j) /= sqrt(norm2);
       }
@@ -150,11 +163,10 @@ namespace mnfa {
     Matrix_t<Type> iPsi(n_cell_, n_cell_); // inverse of Psi
     Matrix_t<Type> I_k(n_factor_, n_factor_);
     Matrix_t<Type> I_q(n_cell_, n_cell_);
-    Vector_t<Type> ipsi_vec = psi_.inverse(); // inverse of psi vector
     
     I_k.setIdentity();
     I_q.setIdentity();
-    iPsi = ipsi_vec.asDiagonal();
+    iPsi = ipsi_.asDiagonal();
     Omega.noalias() = L_.transpose() * iPsi * L_; 
     Omega += I_k;
     
@@ -163,10 +175,9 @@ namespace mnfa {
     iOmega = ldlt.solve(I_q);
     Vector_t<Type> Omega_D = ldlt.vectorD();
 
-    logdetQ_ = Omega_D.array().log().sum() + psi_.array().log().sum(); // log|Omega| + log|Psi|
-    logdetQ_ += n_cell_ * log(scale_); // adjust log det by scale
-    Q_.noalias() = iPsi - iPsi * L_ * iOmega * L_.transpose() * iPsi; // compute inverse Sigma
-    Q_ /= scale_; // adjust log det by scale
+    logdetS_ = Omega_D.array().log().sum() + psi_.array().log().sum(); // log|Omega| + log|Psi|
+    Q_ = iPsi;
+    Q_.noalias() -= iPsi * L_ * iOmega * L_.transpose() * iPsi; // compute inverse Sigma
   }
 
   /// Calculate the quadratic component of the MVN density.
@@ -181,7 +192,7 @@ namespace mnfa {
   /// @param[in] x Vector of length `n_cell` to be evaluated at.
   template <class Type>
   inline Type MVN_FA<Type>::operator()(Vector_t<Type> x){
-    return Type(.5)*logdetQ_ + Type(.5)*xQx(x) + x.size()*Type(log(sqrt(2.0*3.14159265359)));
+    return Type(0.5)*logdetS_ + Type(0.5)*n_cell_*log(scale_) + Type(0.5)/scale_ *xQx(x) + x.size()*Type(log(sqrt(2.0*M_PI))); // scaling by time scale is applied here
   }
 
   /// Get the lower triangular elements (by column) of a correlation matrix as a vector.

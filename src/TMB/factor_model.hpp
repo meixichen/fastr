@@ -60,8 +60,9 @@ Type factor_model(objective_function<Type>* obj){
       }
     }
   }
+  REPORT(Sig);
   return nll;
-  
+
 }
 
 #undef TMB_OBJECTIVE_PTR
