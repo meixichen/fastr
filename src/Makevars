@@ -9,7 +9,8 @@
 # Flags specifically for the TMB compilation can also be set
 # through the 'TMB_FLAGS' argument below, e.g.,
 #
-TMB_FLAGS = -std=c++11 -I"../../inst/include" # add include directory inst/include
+## TMB_FLAGS = $(SHLIB_OPENMP_CXXFLAGS) -std=gnu++11 -I"../../inst/include" # uncomment to enable OPENMP
+TMB_FLAGS = -std=gnu++11 -I"../../inst/include" # add include directory inst/include
 #
 # --- TMB-specific compiling directives below ---
 
@@ -24,3 +25,4 @@ tmblib:
 
 clean:
 	rm -rf *.so *.o TMB/*.so TMB/*.o
+
