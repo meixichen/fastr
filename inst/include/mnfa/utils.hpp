@@ -95,16 +95,18 @@ namespace mnfa {
     Matrix_t<Type> Q_; ///> Inverse of MVN cov mat Sigma.
     Type logdetS_; ///> Log determinant of MVN Sigma.
   public:
-    MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, Type scale);
+    MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, 
+	Type scale, bool use_atomic=true);
     Matrix_t<Type> cov();
     Type operator()(Vector_t<Type> x);
     Type xQx(Vector_t<Type> x);
-    void setQ();
+    void setQ(bool use_atomic=true);
     void normalize(cRefVector_t<Type>& Lt);  
   };
 
   template <class Type>
-  inline MVN_FA<Type>::MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, Type scale){
+  inline MVN_FA<Type>::MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, 
+      Type scale, bool use_atomic){
     n_cell_ = n_cell;
     n_factor_ = n_factor;
     scale_ = scale;
@@ -115,7 +117,7 @@ namespace mnfa {
     Q_ = Matrix_t<Type>::Zero(n_cell_, n_cell_);
     // compute quantities needed for density evaluation.
     normalize(Lt);
-    setQ();
+    setQ(use_atomic);
   }
 
   /// Output the covariance matrix
@@ -156,7 +158,7 @@ namespace mnfa {
  
   /// Initialize components for calculating the negative log density.
   template <class Type>
-  inline void MVN_FA<Type>::setQ(){
+  inline void MVN_FA<Type>::setQ(bool use_atomic){
     // Question: do I need to move the following declarations to under Private?
     Matrix_t<Type> Omega(n_factor_, n_factor_); // Omega = I + L' iPsi L
     Matrix_t<Type> iOmega(n_factor_, n_factor_); // inverse of Omega
@@ -170,10 +172,9 @@ namespace mnfa {
     Omega += I_k;
     
     // matrix decomposition
-    Eigen::LDLT<Eigen::Matrix<Type, Eigen::Dynamic, Eigen::Dynamic> > ldlt(Omega);
+    Eigen::LDLT<Matrix_t<Type> > ldlt(Omega);
     iOmega = ldlt.solve(I_k);
     Vector_t<Type> Omega_D = ldlt.vectorD();
-
     logdetS_ = Omega_D.array().log().sum() + psi_.array().log().sum(); // log|Omega| + log|Psi|
     PLOLP = iPsi * L_ * iOmega * L_.transpose() * iPsi; 
     Q_ = iPsi - PLOLP;
