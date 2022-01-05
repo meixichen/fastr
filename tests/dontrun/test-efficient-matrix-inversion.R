@@ -1,5 +1,3 @@
-setwd("~/projects/NeuronModel/mnfa/src")
-devtools::load_all()
 set.seed(123)
 dt <- 0.01
 n_bin <- 50

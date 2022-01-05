@@ -37,7 +37,7 @@ mod_fit <- nlminb(adfun$par, adfun$fn, adfun$gr) # optimization
 rep <- TMB::sdreport(adfun) # get Hessian
 t_taken <- Sys.time() - t_start
 print("Time taken to fit the dense matrix model is", t_taken)
-
+print(summary(rep, "fixed"))
 #---------- Lower tri Lambda -----------
 mod_name <- "factor_model_parallel"
 compile(paste0(mod_name, ".cpp"))
@@ -60,3 +60,4 @@ mod_fit_lt <- nlminb(adfun_lt$par, adfun_lt$fn, adfun_lt$gr) # optimization
 rep_lt <- TMB::sdreport(adfun_lt) # get Hessian
 t_taken <- Sys.time() - t_start
 print("Time taken to fit the lower triangular matrix model is", t_taken)
+print(summary(rep_lt, "fixed"))
