@@ -92,21 +92,20 @@ namespace mnfa {
     Matrix_t<Type> L_; ///> Normalized loading matrix.
     Vector_t<Type> psi_; ///> Diagonal vector of the uniqueness matrix.
     Vector_t<Type> ipsi_; ///> Inverse of psi.
-    Matrix_t<Type> Q_; ///> Inverse of MVN cov mat Sigma.
+    Matrix_t<Type> LP_; ///> tLambda * iPsi
+    Eigen::LDLT<Matrix_t<Type> > chol_; ///> Cholesky decomp
     Type logdetS_; ///> Log determinant of MVN Sigma.
   public:
-    MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, 
-	Type scale, bool use_atomic=true);
+    MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, Type scale);
     Matrix_t<Type> cov();
     Type operator()(Vector_t<Type> x);
     Type xQx(Vector_t<Type> x);
-    void setQ(bool use_atomic=true);
+    void precomp();
     void normalize(cRefVector_t<Type>& Lt);  
   };
 
   template <class Type>
-  inline MVN_FA<Type>::MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, 
-      Type scale, bool use_atomic){
+  inline MVN_FA<Type>::MVN_FA(cRefVector_t<Type>& Lt, int n_cell, int n_factor, Type scale){
     n_cell_ = n_cell;
     n_factor_ = n_factor;
     scale_ = scale;
@@ -114,10 +113,10 @@ namespace mnfa {
     L_ = Matrix_t<Type>::Zero(n_cell_, n_factor_);
     psi_ = Vector_t<Type>::Zero(n_cell_);
     ipsi_ = Vector_t<Type>::Zero(n_cell_); 
-    Q_ = Matrix_t<Type>::Zero(n_cell_, n_cell_);
+    LP_ = Matrix_t<Type>::Zero(n_factor_, n_cell_);
     // compute quantities needed for density evaluation.
     normalize(Lt);
-    setQ(use_atomic);
+    precomp();
   }
 
   /// Output the covariance matrix
@@ -158,34 +157,36 @@ namespace mnfa {
  
   /// Initialize components for calculating the negative log density.
   template <class Type>
-  inline void MVN_FA<Type>::setQ(bool use_atomic){
+  inline void MVN_FA<Type>::precomp(){
     // Question: do I need to move the following declarations to under Private?
     Matrix_t<Type> Omega(n_factor_, n_factor_); // Omega = I + L' iPsi L
-    Matrix_t<Type> iOmega(n_factor_, n_factor_); // inverse of Omega
     Matrix_t<Type> iPsi(n_cell_, n_cell_); // inverse of Psi
-    Matrix_t<Type> PLOLP(n_cell_, n_cell_); // PLOLP = iPsi*L*iOmega*Lt*iPsi. Q=iPsi-PLOLP.
     Matrix_t<Type> I_k(n_factor_, n_factor_);
     
     I_k.setIdentity();
     iPsi = ipsi_.asDiagonal();
     Omega.noalias() = L_.transpose() * iPsi * L_; 
     Omega += I_k;
+    LP_.noalias() = L_.transpose() * iPsi; 
     
     // matrix decomposition
-    Eigen::LDLT<Matrix_t<Type> > ldlt(Omega);
-    iOmega = ldlt.solve(I_k);
-    Vector_t<Type> Omega_D = ldlt.vectorD();
+    chol_ = Omega.ldlt();
+    Vector_t<Type> Omega_D = chol_.vectorD();
     logdetS_ = Omega_D.array().log().sum() + psi_.array().log().sum(); // log|Omega| + log|Psi|
-    PLOLP = iPsi * L_ * iOmega * L_.transpose() * iPsi; 
-    Q_ = iPsi - PLOLP;
   }
 
   /// Calculate the quadratic component of the MVN density.
   /// @param[in] x Vector of length `n_cell` to be evaluated at.
   template <class Type>
   inline Type MVN_FA<Type>::xQx(Vector_t<Type> x){
-    Vector_t<Type> Qx = Q_ * x;
-    return x.dot(Qx);
+    Vector_t<Type> z(n_factor_);
+    Vector_t<Type> iOmega_z(n_factor_);
+    z.noalias() = LP_ * x; 
+    iOmega_z = chol_.solve(z);
+    Type res1 = iOmega_z.dot(z);  
+    Vector_t<Type> x2 = (x.array() * x.array()).matrix();
+    Type res2 = x2.dot(ipsi_);
+    return res2 - res1; 
   }
   
   /// Evaluate the negative log density of a zero-mean MVN with cov matrix Sigma=LL'+Psi.
