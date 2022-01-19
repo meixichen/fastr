@@ -85,6 +85,9 @@ mod_fit <- nlminb(adfun$par, adfun$fn, adfun$gr, control=list(eval.max=neval, it
 rep <- TMB::sdreport(adfun) 
 t_taken <- Sys.time() - t_start
 estim <- get_FA_estim(mod_fit, n_cell, n_factor)
+obj <- list(true_alpha = alpha, true_k = k, true_L = L, 
+            TMB_rep = rep, estimates = estim)
+saveRDS(obj, file = "test-bigdata-results.rds") # save data
 
 #--------- Display results ----------------
 print(t_taken)

@@ -1,9 +1,9 @@
 set.seed(123)
 dt <- 0.01
-n_bin <- 50
-n_cell <- 300
-n_trial <- 5
-n_factor <- 3
+n_bin <- 1000
+n_cell <- 60
+n_trial <- 10
+n_factor <- 4
 if (is.integer(n_cell/n_factor)) {stop("n_factor must divide n_cell.")}
 cluster_size <- n_cell/n_factor
 k <- runif(n_cell, 0.1, 0.6)
@@ -50,6 +50,7 @@ for (i in 1:n_rep){
     }
   })
   t_eff_mat <- rbind(t_eff_mat, t_eff[1:3])
+  cat("Finished repetition", i, "/", n_rep, "\n")
 }
 
 colnames(t_reg_mat) <- paste("reg", colnames(t_reg_mat))
