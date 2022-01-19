@@ -1,6 +1,6 @@
 # Test whether the model can perform efficiently in the large neuron ensemble scenario
 set.seed(123)
-
+n_factor <- 4 
 #---------- Inputs from user -------------
 model_flag <- readline(prompt = "Choose model flag from [hpp/hpp_woodbury/cpp_parallel]: ")
 
@@ -9,23 +9,21 @@ if (!(model_flag %in% c("hpp", "hpp_woodbury", "cpp_parallel"))){
 }
 
 dt <- readline(prompt = "Enter dt: ")
+dt <- as.numeric(dt)
 n_bin <- readline(prompt = "Enter n_bin: ")
+n_bin <- as.integer(n_bin)
 n_cell <- readline(prompt = "Enter n_cell: ")
+n_cell <- as.integer(n_cell)
 if (n_cell%%n_factor != 0){
   stop("n_factor(4) must divide n_cell.")
 }
 n_trial <- readline(prompt = "Enter n_trial: ")
-lam <- readline(prompt = "Enter penalty term lam: ")
-neval <- readline(prompt = "Enter max number of function evaluations for nlminb: ")
-niter <- readline(prompt = "Enter max number of iterations for nlminb: ")
-n_factor <- 4 
-#-------- Transform entered values to numeric/integer ----------------
-dt <- as.numeric(dt)
-n_bin <- as.integer(n_bin)
-n_cell <- as.integer(n_cell)
 n_trial <- as.integer(n_trial)
+lam <- readline(prompt = "Enter penalty term lam: ")
 lam <- as.numeric(lam)
+neval <- readline(prompt = "Enter max number of function evaluations for nlminb: ")
 neval <- as.integer(neval)
+niter <- readline(prompt = "Enter max number of iterations for nlminb: ")
 niter <- as.integer(niter)
 
 #-------- Data simulation -----------------------
