@@ -1,6 +1,7 @@
 # Check the following:
 # 1. does the parallel model produce correct nll
 # 2. how much the parallel model is faster
+set.seed(123)
 require(TMB)
 #require(mnfa)
 mod_name <- "factor_model_parallel"
