@@ -4,6 +4,9 @@ require(TMB)
 mod_name1 <- "factor_model_big_parallel"
 compile(paste0(mod_name1, ".cpp"))
 dyn.load(dynlib(mod_name1))
+mod_name2 <- "factor_model_parallel"
+compile(paste0(mod_name2, ".cpp"))
+dyn.load(dynlib(mod_name2))
 
 dt <- 0.005
 n_bin <- 2000
@@ -41,6 +44,16 @@ adfun_bigparallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam
                                  random = "x",
                                  DLL = mod_name1,
                                  silent = F)
+adfun_big <- TMB::MakeADFun(data=list(model="factor_model_big", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+                                 parameters=init_param,
+                                 random = "x",
+                                 DLL = "mnfa_TMBExports",
+                                 silent = F)
+adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+                                 parameters=init_param,
+                                 random = "x",
+                                 DLL = mod_name2,
+                                 silent = F)
 adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=1),
                                  parameters=init_param,
                                  random = "x",
@@ -51,11 +64,19 @@ t_bigparallel <- system.time({
   fit_bigparallel <- nlminb(adfun_bigparallel$par, adfun_bigparallel$fn, adfun_bigparallel$gr)
 })
 cat("Finished fitting big parallel. Time elapsed is", t_bigparallel[3], ". \n")
+t_big <- system.time({
+  fit_big <- nlminb(adfun_big$par, adfun_big$fn, adfun_big$gr)
+})
+cat("Finished fitting big. Time elapsed is", t_big[3], ". \n")
+t_parallel <- system.time({
+  fit_parallel <- nlminb(adfun_parallel$par, adfun_parallel$fn, adfun_parallel$gr)
+})
+cat("Finished fitting parallel. Time elapsed is", t_parallel[3], ". \n")
 t_serial <- system.time({
   fit_serial <- nlminb(adfun_serial$par, adfun_serial$fn, adfun_serial$gr)
 })
 cat("Finished fitting serial. Time elapsed is", t_serial[3], ". \n")
 
 
-print(rbind(t_bigparallel,t_serial)[,1:3])
+print(rbind(t_bigparallel,t_big, t_parallel, t_serial)[,1:3])
 
