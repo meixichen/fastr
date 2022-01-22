@@ -1,11 +1,12 @@
 # Test whether the model can perform efficiently in the large neuron ensemble scenario
+require(TMB)
 set.seed(123)
 n_factor <- 4 
 #---------- Inputs from user -------------
-model_flag <- readline(prompt = "Choose model flag from [hpp/hpp_woodbury/cpp_parallel]: ")
+model_flag <- readline(prompt = "Choose model flag from [hpp/hpp_woodbury/cpp_parallel/cpp_bigparallel]: ")
 
-if (!(model_flag %in% c("hpp", "hpp_woodbury", "cpp_parallel"))){
-  stop("model_flag must be one of 'hpp', 'hpp_woodbury', or 'cpp_parallel'.")
+if (!(model_flag %in% c("hpp", "hpp_woodbury", "cpp_parallel", "cpp_bigparallel"))){
+  stop("model_flag must be one of 'hpp', 'hpp_woodbury', 'cpp_parallel', or 'cpp_bigparallel'.")
 }
 
 dt <- readline(prompt = "Enter dt: ")
@@ -25,6 +26,10 @@ neval <- readline(prompt = "Enter max number of function evaluations for nlminb:
 neval <- as.integer(neval)
 niter <- readline(prompt = "Enter max number of iterations for nlminb: ")
 niter <- as.integer(niter)
+filename <- readline(prompt = "Enter file name for saving R data: ")
+if (tolower(tail(unlist(strsplit(filename, "[.]")), n=1)) != "rds"){
+  filename <- paste0(filename, ".rds")
+}
 
 #-------- Data simulation -----------------------
 cluster_size <- n_cell/n_factor
@@ -54,8 +59,14 @@ cat("Data simulated.\n")
 
 #-------- Construct ADfun ---------------------
 if (model_flag == "cpp_parallel"){
-  require(TMB)
   mod_name <- "factor_model_parallel"
+  compile(paste0(mod_name, ".cpp"))
+  dyn.load(dynlib(mod_name))
+  openmp(4) # use 4 threads
+  data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=lam)
+  DLL <- mod_name
+}else if (model_flag == "cpp_bigparallel"){
+  mod_name <- "factor_model_big_parallel"
   compile(paste0(mod_name, ".cpp"))
   dyn.load(dynlib(mod_name))
   openmp(4) # use 4 threads
@@ -69,7 +80,7 @@ if (model_flag == "cpp_parallel"){
   DLL <- "mnfa_TMBExports"
 }
 
-adfun <- TMB::MakeADFun(data=data,
+adfun <- MakeADFun(data=data,
                         parameters=init_param,
                         random = "x",
                         DLL = DLL,
@@ -80,12 +91,13 @@ cat("ADFun constructed. Ready for optimization. \n")
 #--------- Optimization--------------------
 t_start <- Sys.time()
 mod_fit <- nlminb(adfun$par, adfun$fn, adfun$gr, control=list(eval.max=neval, iter.max=niter)) 
-rep <- TMB::sdreport(adfun) 
+cat("nlminb optimization finised...running sdreport... \n")
+rep <- sdreport(adfun) 
 t_taken <- Sys.time() - t_start
 estim <- get_FA_estim(mod_fit, n_cell, n_factor)
 obj <- list(true_alpha = alpha, true_k = k, true_L = L, 
-            TMB_rep = rep, estimates = estim)
-saveRDS(obj, file = "test-bigdata-results.rds") # save data
+            fit = mod_fit, report = rep, estimates = estim)
+saveRDS(obj, file = filename) # save data
 
 #--------- Display results ----------------
 print(t_taken)
