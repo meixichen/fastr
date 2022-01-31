@@ -95,7 +95,7 @@ cat("nlminb optimization finised...running sdreport... \n")
 rep <- sdreport(adfun) 
 t_taken <- Sys.time() - t_start
 estim <- get_FA_estim(mod_fit, n_cell, n_factor)
-obj <- list(true_alpha = alpha, true_k = k, true_L = L, 
+obj <- list(t_taken = t_taken, true_alpha = alpha, true_k = k, true_L = L, 
             fit = mod_fit, report = rep, estimates = estim)
 saveRDS(obj, file = filename) # save data
 
