@@ -1,7 +1,7 @@
 set.seed(123)
 require(TMB)
 #require(mnfa)
-mod_name1 <- "factor_model_big_parallel"
+mod_name1 <- "factor_model_eff_parallel"
 compile(paste0(mod_name1, ".cpp"))
 dyn.load(dynlib(mod_name1))
 
@@ -38,7 +38,7 @@ cat("Data simulated.\n")
 adfun <- TMB::MakeADFun(data=list(model="factor_model", n_bin=n_bin, n_cell=n_cell, n_trial=n_trial, n_factor=n_factor, dt=dt, Y=Y, lam=0.1),
                         parameters=init_param,
                         DLL = "mnfa_TMBExports", silent = TRUE)
-adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_big", n_bin=n_bin, n_cell=n_cell, n_trial=n_trial, n_factor=n_factor, dt=dt, Y=Y, lam=0.1),
+adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_bin=n_bin, n_cell=n_cell, n_trial=n_trial, n_factor=n_factor, dt=dt, Y=Y, lam=0.1),
                             parameters=init_param,
                             DLL = "mnfa_TMBExports", silent = TRUE)
 adfun_eff_para <- TMB::MakeADFun(data=list(n_bin=n_bin, n_cell=n_cell, n_trial=n_trial, n_factor=n_factor, dt=dt, Y=Y, lam=0.1),

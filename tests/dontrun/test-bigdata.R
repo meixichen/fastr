@@ -66,7 +66,7 @@ if (model_flag == "cpp_parallel"){
   data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=lam)
   DLL <- mod_name
 }else if (model_flag == "cpp_bigparallel"){
-  mod_name <- "factor_model_big_parallel"
+  mod_name <- "factor_model_eff_parallel"
   compile(paste0(mod_name, ".cpp"))
   dyn.load(dynlib(mod_name))
   openmp(4) # use 4 threads
@@ -76,7 +76,7 @@ if (model_flag == "cpp_parallel"){
   data <- list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=lam)
   DLL <- "mnfa_TMBExports"
 }else {
-  data <- list(model="factor_model_big", n_factor=n_factor, dt=dt, Y=Y, lam=lam)
+  data <- list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=lam)
   DLL <- "mnfa_TMBExports"
 }
 

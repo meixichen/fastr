@@ -1,5 +1,5 @@
-#ifndef factor_model_big_hpp
-#define factor_model_big_hpp
+#ifndef factor_model_eff_hpp
+#define factor_model_eff_hpp
 
 #include "mnfa/utils.hpp"
 
@@ -7,7 +7,7 @@
 #define TMB_OBJECTIVE_PTR obj
   
 template<class Type>
-Type factor_model_big(objective_function<Type>* obj){
+Type factor_model_eff(objective_function<Type>* obj){
   // data inputs
   DATA_INTEGER(n_factor); // number of factors 
   DATA_SCALAR(dt); // length of the time bin 

@@ -34,13 +34,13 @@ test_that("Factor models in C++ has same nll as the nll computed in R. ",{
     nll_tmb <- adfun$fn(unlist(init_param)) # negative log-likelihood computed by TMB/C++
     expect_equal(nll_tmb, nll_r)
     # Efficient matrix inversion applied
-    adfun_big <- TMB::MakeADFun(data=list(model="factor_model_big", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+    adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=1),
                             parameters=init_param,
                             DLL = "mnfa_TMBExports", 
                             silent = TRUE)
     
-    nll_tmb_big <- adfun_big$fn(unlist(init_param))
-    expect_equal(nll_tmb_big, nll_r)
+    nll_tmb_eff <- adfun_eff$fn(unlist(init_param))
+    expect_equal(nll_tmb_eff, nll_r)
   }
 })
 
@@ -75,13 +75,13 @@ test_that("Optimization of the factor models converges and gives PD Hessian.",{
   expect_true(rep$pdHess) # Expect the Hessian matrix is positive definite, i.e., no NA standard errors
   
   # Efficient matrix inversion applied
-  adfun_big <- TMB::MakeADFun(data=list(model="factor_model_big", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+  adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=1),
                               parameters=init_param,
                               random = "x",
                               DLL = "mnfa_TMBExports", 
                               silent = T)
-  mod_fit_big <- nlminb(adfun_big$par, adfun_big$fn, adfun_big$gr) # optimization
-  rep_big <- TMB::sdreport(adfun_big) # get Hessian
-  expect_equal(mod_fit_big$convergence, 0) # Expect convergence indicator is 0, i.e., nlminb has converged
-  expect_true(rep_big$pdHess)
+  mod_fit_eff <- nlminb(adfun_eff$par, adfun_eff$fn, adfun_eff$gr) # optimization
+  rep_eff <- TMB::sdreport(adfun_eff) # get Hessian
+  expect_equal(mod_fit_eff$convergence, 0) # Expect convergence indicator is 0, i.e., nlminb has converged
+  expect_true(rep_eff$pdHess)
 })
