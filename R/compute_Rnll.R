@@ -1,13 +1,13 @@
 #' Compute the negative log-likelihood of the factor model in R
 #' @param data A list of a 3d data array `Y`, penalization parameter `lam`, time bin size `dt`, and num of factors `n_factor`.
-#' @param param_list A list of parameters including vector `log_k`, vector `log_a`, 3d array `x` (latent paths), 
-#' and vector `Lt` (unnormalized lower tri elements of loading matrix)
+#' @param param_list A list of parameters including vector `log_k`, vector `log_a`, (optionally vector `log_sig` here between `log_a` and `x`), vector `Lt` (unnormalized lower tri elements of loading matrix), and 3d array `x` (latent paths). 
 #' @return Scalar of negative log-likelihood
 #' @export
 
 compute_Rnll <- function(data, param_list){
   k <- exp(param_list$log_k)
   alpha <- exp(param_list$log_a)
+  log_sig <- param_list$log_sig
   Lt <- param_list$Lt
   x <- param_list$x
   dim_x <- dim(x)
@@ -18,6 +18,13 @@ compute_Rnll <- function(data, param_list){
   Y <- data$Y
   lam <- data$lam
   dt <- data$dt
+
+  if (is.null(log_sig)){
+    sig <- rep(1, n_cell) # if not provided, all sigma are 1
+  }
+  else{
+    sig <- exp(log_sig)
+  }
   #----- fill in the covariance matrix for latent increments -----
   L <- matrix(0, nrow=n_cell, ncol=n_factor) # loading matrix
   psi <- rep(0, n_cell) # diagonal of uniqueness matrix
@@ -33,9 +40,9 @@ compute_Rnll <- function(data, param_list){
     for (j in 1:n_factor){
       norm2 <- norm2 + L[i,j]^2
     }
-    psi[i] <- 1/norm2
+    psi[i] <- sig[i]^2/norm2
     for (j in 1:n_factor){
-      L[i,j] <- L[i,j]/sqrt(norm2)
+      L[i,j] <- sig[i]*L[i,j]/sqrt(norm2)
     }
   }
   Sig <- L%*%t(L) + diag(psi)
