@@ -1,7 +1,6 @@
 # Test whether the model can perform efficiently in the large neuron ensemble scenario
 require(TMB)
 set.seed(123)
-n_factor <- 4 
 #---------- Inputs from user -------------
 model_flag <- readline(prompt = "Choose model flag from [hpp/hpp_woodbury/cpp_parallel/cpp_bigparallel]: ")
 
@@ -15,8 +14,10 @@ n_bin <- readline(prompt = "Enter n_bin: ")
 n_bin <- as.integer(n_bin)
 n_cell <- readline(prompt = "Enter n_cell: ")
 n_cell <- as.integer(n_cell)
+n_factor <- readline(prompt = "Enter n_factor (currently only supporting n_factor=2, 4): ")
+n_factor <- as.integer(n_factor)
 if (n_cell%%n_factor != 0){
-  stop("n_factor(4) must divide n_cell.")
+  stop("n_factor must divide n_cell.")
 }
 n_trial <- readline(prompt = "Enter n_trial: ")
 n_trial <- as.integer(n_trial)
@@ -35,19 +36,31 @@ if (tolower(tail(unlist(strsplit(filename, "[.]")), n=1)) != "rds"){
 cluster_size <- n_cell/n_factor
 k <- runif(n_cell, 0.1, 0.6)
 alpha <- runif(n_cell, 2, 5.5)
-l1 <- runif(n_cell, 0.1, 0.25)
-l2 <- runif(n_cell, 0.1, 0.25)
-l3 <- runif(n_cell, 0.1, 0.25)
-l4 <- runif(n_cell, 0.1, 0.25)
-cluster1 <- 1:cluster_size
-cluster2 <- (cluster_size+1):(2*cluster_size)
-cluster3 <- (2*cluster_size+1):(3*cluster_size)
-cluster4 <- (3*cluster_size+1):(4*cluster_size)
-l1[cluster1] <- runif(cluster_size, 0.7, 0.95)
-l2[cluster2] <- runif(cluster_size, 0.7, 0.95)
-l3[cluster3] <- runif(cluster_size, 0.7, 0.95)
-l4[cluster4] <- runif(cluster_size, 0.7, 0.95)
-L <- cbind(l1, l2, l3, l4)
+if (n_factor == 2){
+  l1 <- runif(n_cell, 0.1, 0.25)
+  l2 <- runif(n_cell, 0.1, 0.25)
+  cluster1 <- 1:cluster_size
+  cluster2 <- (cluster_size+1):(2*cluster_size)
+  l1[cluster1] <- runif(cluster_size, 0.7, 0.95)
+  l2[cluster2] <- runif(cluster_size, 0.7, 0.95)
+  L <- cbind(l1, l2)
+}else if (n_factor == 4){
+  l1 <- runif(n_cell, 0.1, 0.25)
+  l2 <- runif(n_cell, 0.1, 0.25)
+  l3 <- runif(n_cell, 0.1, 0.25)
+  l4 <- runif(n_cell, 0.1, 0.25)
+  cluster1 <- 1:cluster_size
+  cluster2 <- (cluster_size+1):(2*cluster_size)
+  cluster3 <- (2*cluster_size+1):(3*cluster_size)
+  cluster4 <- (3*cluster_size+1):(4*cluster_size)
+  l1[cluster1] <- runif(cluster_size, 0.7, 0.95)
+  l2[cluster2] <- runif(cluster_size, 0.7, 0.95)
+  l3[cluster3] <- runif(cluster_size, 0.7, 0.95)
+  l4[cluster4] <- runif(cluster_size, 0.7, 0.95)
+  L <- cbind(l1, l2, l3, l4)
+}else{
+ stop("Currently only supporting n_factor=2, 4.")
+}
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
