@@ -17,6 +17,28 @@ simdata <- function(dt, n_bin, n_trial, alpha, k, rho, L){
     stop("Lengths of alpha and k must match.")
   }
   
+  # Simulate 1 neuron
+  if (n_cell == 1){
+    dx <- array(0, dim=c(n_bin, n_trial))
+    Y <- array(0, dim=c(n_bin, n_trial))
+    for (u in 1:n_trial){
+      Nt <- 1
+      for (t in 1:n_bin){
+	dx[t,u] <- rnorm(1, mean=alpha*dt, sd=sqrt(dt))
+        p_jump <- ifelse(sum(dx[1:t,u])>= Nt*k, 1, 0)
+	Y[t,u] <- rbinom(1, 1, p_jump)
+	Nt <- Nt + Y[t,u]
+      }
+    }
+    x <- array(0, dim = c(n_bin, n_trial))
+    for (u in 1:n_trial){
+      x[,u] <- cumsum(dx[,u])
+    }
+    
+    return(list(Y=Y, x=x))
+  }
+  
+  # Simulate more than 1 neuron
   if (missing(rho)){
     if (missing(L)){
       stop("Must provide either rho or L")
@@ -37,7 +59,7 @@ simdata <- function(dt, n_bin, n_trial, alpha, k, rho, L){
       }
     }
   }
-  
+
   dx <- array(0, dim = c(n_cell,n_bin, n_trial))
   Y <- array(0, dim = c(n_cell,n_bin, n_trial))
   
