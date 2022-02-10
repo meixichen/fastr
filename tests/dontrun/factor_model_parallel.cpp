@@ -1,7 +1,11 @@
 #include <TMB.hpp>
 
+#include "../../inst/include/mnfa/utils.hpp"
+
 template<class Type>
 Type objective_function<Type>::operator() (){
+  using namespace density;         
+  using namespace mnfa;
   // data inputs                                                                                     
   DATA_INTEGER(n_factor); // number of factors                                                       
   DATA_SCALAR(dt); // length of the time bin                                                         
@@ -14,7 +18,6 @@ Type objective_function<Type>::operator() (){
   PARAMETER_VECTOR(Lt); // dq-d(d-1)/2 vector of the lower triangular elements of L (by column)      
   PARAMETER_ARRAY(x); // q x n x r neuron paths                                                      
   
-  using namespace density;         
   // transformed data                                                                                
   vector<int> Y_dim = Y.dim; // dimension of data Y (a 3d array)                                     
   int n_cell = Y_dim(0); // number of neurons                                                        
@@ -24,33 +27,11 @@ Type objective_function<Type>::operator() (){
   // transformed parameters                                                                          
   vector<Type> k = exp(log_k);                                                                       
   vector<Type> alpha = exp(log_a);                                                                   
-  
-  //----------Modularize below -------------                                                        
-  matrix<Type> L(n_cell, n_factor); // loading matrix                                               
-  matrix<Type> Sig(n_cell, n_cell); // latent path increment cov matrix                             
-  matrix<Type> Psi(n_cell, n_cell); // error term cov matrix                                        
-  int indx=0;
-  L.setIdentity();
-  Psi.setIdentity();
-  for (int j=0;j<n_factor;j++){ // column                                                           
-    for (int i=j;i<n_cell;i++){ // row                                                              
-      L(i,j) = Lt(indx++);
-    }
-  }
-  
-  for (int i=0;i<n_cell;i++){
-    Type norm2 = Psi(i,i);
-    for (int j=0;j<n_factor;j++){
-      norm2 += L(i,j) * L(i,j);
-    }
-    Psi(i,i) = Psi(i,i)/norm2;
-    for (int j=0;j<n_factor;j++){
-      L(i,j) /= sqrt(norm2);
-    }
-  }
-  
-  Sig = L * L.transpose() + Psi;
-  //--------------------------------       
+  matrix<Type> Sig(n_cell, n_cell); // latent path increment cov matrix
+  vector<Type> rho(n_cell*(n_cell-1)/2); // vector of lower triangular elements of the Sig
+  SigmaFA<Type> Sig_FA(n_cell, n_factor);
+  Sig_FA.create(Sig, Lt);
+
   // negative log-likelihood computation  
   MVNORM_t<Type> latent_nll(Sig*dt); // MVN distn for the increments of latent path x           
   vector<Type> reg = Lt*Lt; // l2 (ridge) regularization                                             
