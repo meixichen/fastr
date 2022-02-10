@@ -31,7 +31,7 @@ namespace mnfa {
   class SigmaFA {
   private:
     int n_cell_; ///> Number of cells.
-    int n_factor_; ///> Number of neurons.
+    int n_factor_; ///> Number of factors.
     Matrix_t<Type> L_; ///> Loading matrix.
     Vector_t<Type> psi_; ///> Diagonal vector.
   public:
