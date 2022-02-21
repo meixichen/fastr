@@ -7,7 +7,7 @@
 prop_paths(Y, dt, log_k, log_a)
 }
 \arguments{
-\item{Y}{q x n x r array of data where q is num of neurons, n is num of bins, r is num of trials}
+\item{Y}{A n x r array or q x n x r array of data where q is num of neurons, n is num of bins, r is num of trials}
 
 \item{dt}{Length of time bin}
 

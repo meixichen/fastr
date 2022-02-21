@@ -9,8 +9,7 @@ compute_Rnll(data, param_list)
 \arguments{
 \item{data}{A list of a 3d data array \code{Y}, penalization parameter \code{lam}, time bin size \code{dt}, and num of factors \code{n_factor}.}
 
-\item{param_list}{A list of parameters including vector \code{log_k}, vector \code{log_a}, 3d array \code{x} (latent paths),
-and vector \code{Lt} (unnormalized lower tri elements of loading matrix)}
+\item{param_list}{A list of parameters including vector \code{log_k}, vector \code{log_a}, (optionally vector \code{log_sig} here between \code{log_a} and \code{x}), vector \code{Lt} (unnormalized lower tri elements of loading matrix), and 3d array \code{x} (latent paths).}
 }
 \value{
 Scalar of negative log-likelihood
