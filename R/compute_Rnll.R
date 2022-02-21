@@ -18,6 +18,7 @@ compute_Rnll <- function(data, param_list){
   Y <- data$Y
   lam <- data$lam
   dt <- data$dt
+  nu <- data$nu
 
   if (is.null(log_sig)){
     sig <- rep(1, n_cell) # if not provided, all sigma are 1
@@ -58,7 +59,7 @@ compute_Rnll <- function(data, param_list){
     Nt <- rep(1, n_cell)
     for (j in 1:n_bin){
       for (i in 1:n_cell){
-        nll <- nll - dbinom(Y[i, j, u], 1, invlogit(x[i, j, u] - Nt[i] * k[i]), log=T)
+        nll <- nll - dbinom(Y[i, j, u], 1, sigm(0, nu, x[i, j, u] - Nt[i] * k[i]), log=T)
         Nt[i] <- Nt[i] + Y[i, j, u] 
       }
     }

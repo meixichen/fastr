@@ -27,11 +27,11 @@ init_param <- list(log_k = rep(-2, n_cell),
                    log_a = rep(0, n_cell),
                    Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
                    x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
-data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1)
+data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.)
 cat("Data simulated.\n")
 #---- Check nll --------------
 nll_r <- compute_Rnll(data, init_param)
-adfun_bigparallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_bigparallel <- TMB::MakeADFun(data=data,
                         parameters=init_param,
                         DLL = mod_name1,
                         silent = FALSE)
@@ -39,22 +39,24 @@ nll_tmb_bigparallel <- adfun_bigparallel$fn(unlist(init_param))
 cat("Difference between r nll and tmb nll is", nll_r - nll_tmb_bigparallel, ". \n")
 
 #---- Compare speed ----------------
-adfun_bigparallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_bigparallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
                                  DLL = mod_name1,
                                  silent = F)
-adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, 
+				      dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
                                  DLL = "mnfa_TMBExports",
                                  silent = F)
-adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
                                  DLL = mod_name2,
                                  silent = F)
-adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
+					dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
                                  DLL = "mnfa_TMBExports",

@@ -4,7 +4,9 @@ template<class Type>
 Type objective_function<Type>::operator() (){
   // data inputs                                                                                       
   DATA_SCALAR(dt); // length of the time bin                                                           
-  DATA_ARRAY(Y); //  n x r array of 0s and 1s                                                   
+  DATA_ARRAY(Y); //  n x r array of 0s and 1s    
+
+  DATA_ARRAY(nu); // sigmoid function scale parameter  
   
   // parameters                                                                                        
   PARAMETER(log_k); // log thresholds (k>0)                                                   
@@ -20,7 +22,8 @@ Type objective_function<Type>::operator() (){
   // transformed parameters                                                                            
   Type k = exp(log_k);    
   Type alpha = exp(log_a);
-
+  Type nu_x; // nu*x
+ 
   // negative log-likelihood computation  
   Type nll = 0;
   Type mu;
@@ -34,7 +37,9 @@ Type objective_function<Type>::operator() (){
     }
     Nt = 1;   
     for(int j=0;j<n_bin;j++){
-      nll -= dbinom_robust(Y(j,u), Type(1), x(j,u) - Nt * k, true);            
+      //nll -= dbinom_robust(Y(j,u), Type(1), x(j,u) - Nt * k, true);
+      nu_x = nu * (x(j,u) - Nt*k);            
+      nll -= Y(j,u) * nu_x - log(1 + exp(nu_x)); 
       Nt += Y(j,u);
     }
   }

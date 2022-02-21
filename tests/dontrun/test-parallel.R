@@ -25,11 +25,11 @@ init_param <- list(log_k = rep(-2, n_cell),
                    log_a = rep(0, n_cell),
                    Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
                    x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
-data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1)
+data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.)
 
 #---- Check nll --------------
 nll_r <- compute_Rnll(data, init_param)
-adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_parallel <- TMB::MakeADFun(data=data,
                         parameters=init_param,
                         DLL = mod_name, 
                         silent = FALSE)
@@ -37,17 +37,19 @@ nll_tmb_parallel <- adfun_parallel$fn(unlist(init_param))
 print(nll_r - nll_tmb_parallel)
 
 #---- Compare speed ----------------
-adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
                                  DLL = mod_name,
                                  silent = T)
-adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
+					dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
                                  DLL = "mnfa_TMBExports", 
                                  silent = T)
-adfun_parallelhpp <- TMB::MakeADFun(data=list(model="factor_model_parallel", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_parallelhpp <- TMB::MakeADFun(data=list(model="factor_model_parallel", n_factor=n_factor, 
+					      dt=dt, Y=Y, lam=1, nu=5.),
                               parameters=init_param,
                               random = "x",
                               DLL = "mnfa_TMBExports", 

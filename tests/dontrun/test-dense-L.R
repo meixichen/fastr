@@ -26,7 +26,7 @@ init_param <- list(log_k = rep(-2, n_cell),
                    x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
 
 # Efficient matrix inversion not applied
-adfun <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.),
                         parameters=init_param,
                         random="x",
                         DLL = mod_name, 
@@ -49,7 +49,7 @@ init_param <- list(log_k = rep(-2, n_cell),
                    x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
 
 # Efficient matrix inversion not applied
-adfun_lt <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1),
+adfun_lt <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.),
                         parameters=init_param,
                         random="x",
                         DLL = mod_name, 

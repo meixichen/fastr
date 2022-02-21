@@ -7,7 +7,8 @@ Type objective_function<Type>::operator() (){
   DATA_SCALAR(dt); // length of the time bin                                                         
   DATA_ARRAY(Y); //  q x n x r array of 0s and 1s.                                                   
   DATA_SCALAR(lam); // regularization parameter                                                      
-  
+  DATA_SCALAR(nu); 
+
   // parameters                                                                                      
   PARAMETER_VECTOR(log_k); // log thresholds (k>0)                                                   
   PARAMETER_VECTOR(log_a); // log drift (0<drift<1)                                                  
@@ -20,7 +21,8 @@ Type objective_function<Type>::operator() (){
   int n_cell = Y_dim(0); // number of neurons                                                        
   int n_bin = Y_dim(1); // number of time bins                                                       
   int n_trial = Y_dim(2); // number of trials                                                        
-  
+  Type nu_x; 
+
   // transformed parameters                                                                          
   vector<Type> k = exp(log_k);                                                                       
   vector<Type> alpha = exp(log_a);                                                                   
@@ -68,8 +70,10 @@ Type objective_function<Type>::operator() (){
     Nt.fill(1);                                                                                      
     for(int j=0;j<n_bin;j++){                                                                        
       for (int i=0;i<n_cell;i++){                                                                    
-        nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);                      
-        Nt(i) += Y(i,j,u);
+        //nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);                      
+        nu_x = nu * (x(i,j,u) - Nt[i] * k[i]);
+        nll -= Y(i,j,u) * nu_x - log(1 + exp(nu_x));
+	Nt(i) += Y(i,j,u);
       } 
     } 
   } 

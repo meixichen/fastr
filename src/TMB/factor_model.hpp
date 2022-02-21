@@ -13,7 +13,8 @@ Type factor_model(objective_function<Type>* obj){
   DATA_SCALAR(dt); // length of the time bin 
   DATA_ARRAY(Y); //  q x n x r array of 0s and 1s.
   DATA_SCALAR(lam); // regularization parameter
-  
+  DATA_SCALAR(nu); // sigmoid function scale parameter
+    
   // parameters
   PARAMETER_VECTOR(log_k); // log thresholds (k>0)
   PARAMETER_VECTOR(log_a); // log drift (0<drift<1)
@@ -29,6 +30,8 @@ Type factor_model(objective_function<Type>* obj){
   int n_bin = Y_dim(1); // number of time bins
   int n_trial = Y_dim(2); // number of trials
   
+  Type nu_x; // nu*x
+
   // transformed parameters
   vector<Type> k = exp(log_k);
   vector<Type> alpha = exp(log_a);
@@ -55,8 +58,10 @@ Type factor_model(objective_function<Type>* obj){
     Nt.fill(1); 
     for(int j=0;j<n_bin;j++){
       for (int i=0;i<n_cell;i++){
-        nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);
-        Nt(i) += Y(i,j,u);
+        //nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);
+        nu_x = nu * (x(i,j,u) - Nt[i] * k[i]);
+        nll -= Y(i,j,u) * nu_x - log(1 + exp(nu_x)); // log Bernoulli dens with sigmoid prob
+	Nt(i) += Y(i,j,u);
       }
     }
   }

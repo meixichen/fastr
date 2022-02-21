@@ -20,21 +20,23 @@ test_that("Factor models in C++ has same nll as the nll computed in R. ",{
                        log_a = rep(0, n_cell),
                        Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
                        x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
-    data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1)
+    data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.)
     
     #---- R nll --------------
     nll_r <- compute_Rnll(data, init_param)
     
     #---- TMB model nll -----------
     # Efficient matrix inversion not applied
-    adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+    adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
+				      dt=dt, Y=Y, lam=1, nu=5.),
                             parameters=init_param,
                             DLL = "mnfa_TMBExports", 
                             silent = TRUE)
     nll_tmb <- adfun$fn(unlist(init_param)) # negative log-likelihood computed by TMB/C++
     expect_equal(nll_tmb, nll_r)
     # Efficient matrix inversion applied
-    adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+    adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, 
+					  dt=dt, Y=Y, lam=1, nu=5.),
                             parameters=init_param,
                             DLL = "mnfa_TMBExports", 
                             silent = TRUE)
@@ -64,7 +66,8 @@ test_that("Optimization of the factor models converges and gives PD Hessian.",{
                      x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
   
   # Efficient matrix inversion not applied
-  adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+  adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
+				    dt=dt, Y=Y, lam=1, nu=5.),
                           parameters=init_param,
                           random = "x",
                           DLL = "mnfa_TMBExports", 
@@ -75,7 +78,8 @@ test_that("Optimization of the factor models converges and gives PD Hessian.",{
   expect_true(rep$pdHess) # Expect the Hessian matrix is positive definite, i.e., no NA standard errors
   
   # Efficient matrix inversion applied
-  adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=1),
+  adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, 
+					Y=Y, lam=1, nu=5.),
                               parameters=init_param,
                               random = "x",
                               DLL = "mnfa_TMBExports", 
