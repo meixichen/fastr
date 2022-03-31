@@ -32,22 +32,20 @@ x <- sim$x
 
 #------------ Model fitting ---------------
 n_factor_list <- c(2, 3, 4, 5, 6)
-all_mle <- get_ig_mle(Y, dt)
-log_k_mle <- log(all_mle$lam)/2
-log_a_mle <- log_k_mle - log(all_mle$mu)
+#all_mle <- get_ig_mle(Y, dt)
+#log_k_mle <- log(all_mle$lam)/2
+#log_a_mle <- log_k_mle - log(all_mle$mu)
 out <- list()
 for (i in 1:length(n_factor_list)){
   n_factor <- n_factor_list[i]
-  init_param <- list(log_k = log_k_mle,
-		     log_a = log_a_mle,
+  init_param <- list(log_k = rep(-1,n_cell),
+		     log_a = rep(0,n_cell),
 		     Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
-		     x = prop_paths(Y, dt, log_k_mle, log_a_mle))
+		     x = prop_paths(Y, dt, rep(-1,n_cell), rep(0,n_cell)))
   data <- list(model="factor_model_eff", n_factor=n_factor, 
-	       dt=dt, Y=Y, lam=0.5)
+	       dt=dt, Y=Y, lam=0.5, nu=15.)
   adfun<- TMB::MakeADFun(data=data,
 			 parameters=init_param,
-			 map = list(log_k = rep(factor(NA), n_cell),
-				    log_a = rep(factor(NA), n_cell)),
 			 random = "x",
 			 DLL = "mnfa_TMBExports",
 			 silent = F)
@@ -62,4 +60,34 @@ for (i in 1:length(n_factor_list)){
   saveRDS(out_i, file = paste0("sensitivity-analysis-factor", n_factor, ".rds"))
   out[[i]] <- out_i
 }
+saveRDS(out, file="sensitivity-analysis-results.rds")
 
+#-------------- Plots ------------------
+fields::image.plot(1:4, 1:n_cell,t(L), zlim=c(-1,1),
+                   xlab="Column (factor)", ylab="Row (Neuron)",
+                   main=expression(Visualization~of~true~loading~matrix~Lambda))
+fields::image.plot(1:2, 1:n_cell,t(out[[1]]$L$loadings[1:n_cell,]), zlim=c(-1,1),
+                   xlab="Column (factor)", ylab="Row (Neuron)",
+                   main=expression(Visualization~of~Varimax-transformed~widehat(Lambda)~with~2~factors))
+fields::image.plot(1:3, 1:n_cell,t(out[[2]]$L$loadings[1:n_cell,]), zlim=c(-1,1),
+                   xlab="Column (factor)", ylab="Row (Neuron)",
+                   main=expression(Visualization~of~Varimax-transformed~widehat(Lambda)~with~3~factors))
+fields::image.plot(1:4, 1:n_cell,t(out[[3]]$L$loadings[1:n_cell,]), zlim=c(-1,1),
+                   xlab="Column (factor)", ylab="Row (Neuron)",
+                   main=expression(Visualization~of~Varimax-transformed~widehat(Lambda)~with~4~factors))
+fields::image.plot(1:5, 1:n_cell,t(out[[4]]$L$loadings[1:n_cell,]), zlim=c(-1,1),
+                   xlab="Column (factor)", ylab="Row (Neuron)",
+                   main=expression(Visualization~of~Varimax-transformed~widehat(Lambda)~with~5~factors))
+fields::image.plot(1:6, 1:n_cell,t(out[[5]]$L$loadings[1:n_cell,]), zlim=c(-1,1),
+                   xlab="Column (factor)", ylab="Row (Neuron)",
+                   main=expression(Visualization~of~Varimax-transformed~widehat(Lambda)~with~6~factors))
+
+
+par(mfrow=c(2,3))
+for (i in 1:5){
+  plot(k, exp(out[[i]]$fit$par[1:n_cell]), xlab="k", ylab=expression(widehat(k)))
+  abline(0, 1, lty="dashed", col="blue")
+  plot(alpha, exp(out[[i]]$fit$par[(1+n_cell):(2*n_cell)]), 
+       xlab=expression(alpha), ylab=expression(widehat(alpha)))
+  abline(0, 1, lty="dashed", col="blue")
+}
