@@ -148,8 +148,17 @@ fit <- optim(par=c(log(k_hat[i]), log(alpha_hat[i])),
 	   		                          exp(2*theta[1]), log=T))}, 
 	     method="BFGS", hessian=TRUE)
 
-# Actually analytical form of the Hessian in terms of mu and lam
-# Hess <- diag(c(-n*lam/(mu^3), -0.5*n*lam^2)) # taken from the STAR package
+# Analytical form of the Hessian in terms of log(k) and log(a) is derived
+R1_ana <- matrix(0, nrow=2*n_cell, ncol=2*n_cell)
+for (i in 1:n_cell){
+  n <- length(all_ISI[[i]])
+  temp <- n*k_hat[i]*alpha_hat[i]
+  hess_ana <- matrix(c(-temp-2*n,temp,temp,-temp), ncol=2)
+  idx <- (2*(i-1)+1):(2*i)
+  R1_ana[idx, idx] <- hess_ana
+}
+R1_ana <- -R1_ana
+testthat::expect_equal(R1, R1_ana) # check the analytical result matches the numerical one
 
 # Finally, calculate the corrected variance estimator
 R1inv <- solve(R1)
