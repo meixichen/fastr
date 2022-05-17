@@ -8,6 +8,9 @@
 #' ```
 #' \hat{\mu} = \bar{T}, \hat{\lambda} = n/\sum_{i=1}^n(1/T_i - 1/\bar{T}).
 #' ```
+#' If this IG distribution represents the distribution of first passage time of a
+#' Wiener process with threshold k, drift alpha and variance sigma^2, then mu =
+#' k/alpha, lambda=k^2/sigma^2.
 #' @export
 get_ig_mle <- function(Y, dt){
   if (length(dim(Y)) == 3) {
