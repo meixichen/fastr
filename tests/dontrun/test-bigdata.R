@@ -87,10 +87,10 @@ if (model_flag == "cpp_parallel"){
   DLL <- mod_name
 }else if (model_flag == "hpp"){
   data <- list(model="factor_model", n_factor=n_factor, dt=dt, Y=Y, lam=lam, nu=5.)
-  DLL <- "mnfa_TMBExports"
+  DLL <- "fastr_TMBExports"
 }else {
   data <- list(model="factor_model_eff", n_factor=n_factor, dt=dt, Y=Y, lam=lam, nu=5.)
-  DLL <- "mnfa_TMBExports"
+  DLL <- "fastr_TMBExports"
 }
 
 adfun <- MakeADFun(data=data,

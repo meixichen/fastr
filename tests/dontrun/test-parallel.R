@@ -3,7 +3,7 @@
 # 2. how much the parallel model is faster
 set.seed(123)
 require(TMB)
-#require(mnfa)
+#require(fastr)
 mod_name <- "factor_model_parallel"
 compile(paste0(mod_name, ".cpp"))
 dyn.load(dynlib(mod_name)) 
@@ -46,13 +46,13 @@ adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
 					dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
-                                 DLL = "mnfa_TMBExports", 
+                                 DLL = "fastr_TMBExports", 
                                  silent = T)
 adfun_parallelhpp <- TMB::MakeADFun(data=list(model="factor_model_parallel", n_factor=n_factor, 
 					      dt=dt, Y=Y, lam=1, nu=5.),
                               parameters=init_param,
                               random = "x",
-                              DLL = "mnfa_TMBExports", 
+                              DLL = "fastr_TMBExports", 
                               silent = T)
 t_serial <- system.time({
   fit_serial <- nlminb(adfun_serial$par, adfun_serial$fn, adfun_serial$gr)

@@ -3,7 +3,7 @@
 #' @importFrom graphics points
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom truncnorm rtruncnorm
-#' @rawNamespace useDynLib(mnfa, .registration=TRUE);useDynLib(mnfa_TMBExports)
+#' @rawNamespace useDynLib(fastr, .registration=TRUE);useDynLib(fastr_TMBExports)
 "_PACKAGE"
 
 # The following block is used by usethis to automatically manage

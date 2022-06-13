@@ -31,7 +31,7 @@ adfun<- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor,
 				 map = list(log_k = rep(factor(NA), n_cell),
 					    log_a = rep(factor(NA), n_cell)),
                                  random = "x",
-                                 DLL = "mnfa_TMBExports",
+                                 DLL = "fastr_TMBExports",
                                  silent = F)
 
 t_start <- Sys.time()

@@ -1,11 +1,11 @@
 #include <TMB.hpp>
 
-#include "../../inst/include/mnfa/utils.hpp"
+#include "../../inst/include/fastr/utils.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() (){
   using namespace density;         
-  using namespace mnfa;
+  using namespace fastr;
   // data inputs                                                                                     
   DATA_INTEGER(n_factor); // number of factors                                                       
   DATA_SCALAR(dt); // length of the time bin                                                         

@@ -1,6 +1,6 @@
 set.seed(123)
 require(TMB)
-#require(mnfa)
+#require(fastr)
 mod_name1 <- "factor_model_eff_parallel"
 compile(paste0(mod_name1, ".cpp"))
 dyn.load(dynlib(mod_name1))
@@ -48,7 +48,7 @@ adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_facto
 				      dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
-                                 DLL = "mnfa_TMBExports",
+                                 DLL = "fastr_TMBExports",
                                  silent = F)
 adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
@@ -59,7 +59,7 @@ adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
 					dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
-                                 DLL = "mnfa_TMBExports",
+                                 DLL = "fastr_TMBExports",
                                  silent = F)
 cat("All ADFuns constructed. Start fitting Woodbury + parallel. \n")
 t_bigparallel <- system.time({

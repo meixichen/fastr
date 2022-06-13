@@ -1,7 +1,7 @@
 #ifndef factor_model_hpp
 #define factor_model_hpp
 
-#include "mnfa/utils.hpp"
+#include "fastr/utils.hpp"
 
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
@@ -22,7 +22,7 @@ Type factor_model(objective_function<Type>* obj){
   PARAMETER_ARRAY(x); // q x n x r neuron paths
   
   using namespace density;
-  using namespace mnfa;
+  using namespace fastr;
   
   // transformed data
   vector<int> Y_dim = Y.dim; // dimension of data Y (a 3d array)

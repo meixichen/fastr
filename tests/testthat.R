@@ -1,4 +1,4 @@
 library(testthat)
-library(mnfa)
+library(fastr)
 
-test_check("mnfa")
+test_check("fastr")

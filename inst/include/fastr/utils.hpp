@@ -1,11 +1,11 @@
 /// @file utils.hpp
 ///
-/// @brief Utilities for `mnfa`.
+/// @brief Utilities for `fastr`.
 
-#ifndef MNFA_UTILS_HPP
-#define MNFA_UTILS_HPP
+#ifndef FASTR_UTILS_HPP
+#define FASTR_UTILS_HPP
 
-namespace mnfa {
+namespace fastr {
 
   /// @typedef
   /// @brief Standard typedefs for arguments to Eigen functions.
@@ -214,6 +214,6 @@ namespace mnfa {
     return;
   }
 
-} // end namespace mnfa
+} // end namespace fastr
 
 #endif

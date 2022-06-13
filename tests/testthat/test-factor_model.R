@@ -30,7 +30,7 @@ test_that("Factor models in C++ has same nll as the nll computed in R. ",{
     adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
 				      dt=dt, Y=Y, lam=1, nu=5.),
                             parameters=init_param,
-                            DLL = "mnfa_TMBExports", 
+                            DLL = "fastr_TMBExports", 
                             silent = TRUE)
     nll_tmb <- adfun$fn(unlist(init_param)) # negative log-likelihood computed by TMB/C++
     expect_equal(nll_tmb, nll_r)
@@ -38,7 +38,7 @@ test_that("Factor models in C++ has same nll as the nll computed in R. ",{
     adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, 
 					  dt=dt, Y=Y, lam=1, nu=5.),
                             parameters=init_param,
-                            DLL = "mnfa_TMBExports", 
+                            DLL = "fastr_TMBExports", 
                             silent = TRUE)
     
     nll_tmb_eff <- adfun_eff$fn(unlist(init_param))
@@ -70,7 +70,7 @@ test_that("Optimization of the factor models converges and gives PD Hessian.",{
 				    dt=dt, Y=Y, lam=1, nu=5.),
                           parameters=init_param,
                           random = "x",
-                          DLL = "mnfa_TMBExports", 
+                          DLL = "fastr_TMBExports", 
                           silent = T)
   mod_fit <- nlminb(adfun$par, adfun$fn, adfun$gr) # optimization
   rep <- TMB::sdreport(adfun) # get Hessian
@@ -82,7 +82,7 @@ test_that("Optimization of the factor models converges and gives PD Hessian.",{
 					Y=Y, lam=1, nu=5.),
                               parameters=init_param,
                               random = "x",
-                              DLL = "mnfa_TMBExports", 
+                              DLL = "fastr_TMBExports", 
                               silent = T)
   mod_fit_eff <- nlminb(adfun_eff$par, adfun_eff$fn, adfun_eff$gr) # optimization
   rep_eff <- TMB::sdreport(adfun_eff) # get Hessian

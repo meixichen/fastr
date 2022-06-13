@@ -1,6 +1,5 @@
 set.seed(123)
 require(TMB)
-#require(mnfa)
 mod_name <- "1neuron_model"
 compile(paste0(mod_name, ".cpp"))
 dyn.load(dynlib(mod_name))

@@ -1,4 +1,4 @@
-tmb_name <- "mnfa_TMBExports"
+tmb_name <- "fastr_TMBExports"
 tmb_flags <- commandArgs(trailingOnly = TRUE)
 
 if(file.exists(paste0(tmb_name, ".cpp"))) {

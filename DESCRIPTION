@@ -1,5 +1,5 @@
-Package: mnfa
-Title: Multi-Neuron Factor Analysis
+Package: fastr
+Title: fastr: Factor analysis of multi-neuronal spike trains in R
 Version: 0.0.0.9000
 Authors@R: 
     c(person(given = "Meixi",
@@ -8,7 +8,12 @@ Authors@R:
 	   email = "meixi.chen@uwaterloo.ca"),
       person(given = "Martin",
              family = "Lysy",
-	     role = "aut"))
+	     role = "aut",
+	     email = "mlysy@uwaterloo.ca"),
+      person(given = "Reza",
+             family = "Ramezan",
+	     role = "ctb",
+	     email = "rramezan@uwaterloo.ca"))
 Description: This package provides an efficient implementation of a latent factor model for analyzing spike trains recorded from multiple neurons. Quantities of interest in this model are those that charaterize individual neuron's spiking intensity and those that represent the correlation among simultaneously recorded neurons.
 License: GPL (>= 2)
 Encoding: UTF-8
