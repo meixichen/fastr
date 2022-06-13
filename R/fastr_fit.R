@@ -1,0 +1,116 @@
+#' Fit a latent factor model to single or multiple neuron spike trains
+#'
+#' @param data A `n_cell x n_bin x n_trial` (multiple neurons)  or `n_bin x n_trial` 
+#' (single neuron) array of binary spike trains. See details for if the spike train
+#' data is in the form of spike times.
+#' @param dt Scalar. Length of each time bin for time discretization of spike trains.
+#' @param n_factor Integer. Number of independent factors in factor analysis.
+#' @param init A named list of initial values for the parameter vectors `log_a` and
+#' `log_k`  both of length `n_cell`, and the lower triangular entries of the loading
+#' matrix `Lt` of length `n_cell*n_factor-n_factor*(n_factor-1)/2`. 
+#' If `method="2steps"`, only the initial values for the lower triangular loading 
+#' matrix needs to be provided in the form of `list(Lt = Lt_init_values)`.
+#' @param method Estimation method: "2step" or "joint". 
+#' Default is "2step" : the first step is estimating drift `a` and threshold `k`
+#' marginally using an inverse Gaussian model for each neuron independently, and the
+#' second step is estimating the factor loading matrix with `a_hat` and `k_hat` as 
+#' plug-ins the joint likelihood. "joint" method estimates all parameters jointly,
+#' hence more computationally intensive. 
+#' @param lam Scalar. Penalization parameter for the loading matrix elements. Default
+#' is `lam=ifelse(n_cell<10, 1, 0.5)`.
+#' @param nu Scalar. Parameter that controls the "steepness" around 0 of the sigmoid 
+#' function applied at the spike data likelihood layer. Default is 15. 
+#' @param woodbury Use the Woodbury matrix identity to speed up the calculation of
+#' the covariance matrix? Default is T.
+#' @param silent Suppress model fitting messages?
+#' @param adfun_only Only outputs of ADFun created by TMB? This is for debugging
+#' purposes only. 
+#' @param ... Additional arguments to be passed to the optimization function
+#' `nlminb()`
+#' @details If the spike train data comes in the form of spike times, it can be
+#' converted to the format accepted by `fa_fit()` using the function `num2bin()`.
+#' @return A list of class `fastr_fit` containing the following objects:
+#' - time: time taken for model fitting,
+#' - log_a_hat: estimates of log drift parameters `a`,
+#' - log_k_hat: estimates of log threshold parameters `k`,
+#' - loga_se: standard errors of `log_a_hat`,
+#' - logk_se: standard errors of `log_k_hat`,
+#' - lmat_hat: estimate of the loading matrix L,
+#' - lmat_basis_cov: covariance matrix of the raw computational basis of L,
+#' - lmat_varimax: Varimax-transformed loading matrix estimate,
+#' - env: Other objects in the environment created during model fitting.
+#' @export
+
+fa_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
+		   woodbury=T, silent=F, adfun_only=F, ...){
+  n_cell <- dim(data)[1]
+  n_bin <- dim(data)[2]
+  n_trial <- dim(data)[3]
+  
+  if (method == "2step"){
+    all_mle <- get_ig_mle(data_pre, dt)
+    log_k_hat <- all_mle$log_k
+    log_a_hat <- all_mle$log_a
+    hess <- all_mle$hess
+    logk_se <- diag(hess)[1:n_cell]
+    loga_se <- diag(hess)[(n_cell+1):(2*n_cell)]
+    init_param <- list(log_k = log_k_hat,
+		       log_a = log_a_hat,
+		       Lt = init$Lt,
+                       x = prop_paths(data, dt, log_k_hat, log_a_hat))
+    map <- list(log_k=rep(factor(NA), n_cell),
+                log_a=rep(factor(NA), n_cell))		       
+  }
+  else if (method == "joint"){
+    init_param <- list(log_k = init$log_k,
+		       log_a = init$log_a,
+		       Lt = init$Lt,
+                       x = prop_paths(data, dt, init$log_k, init$log_a))
+    map <- NULL
+  }
+  else{
+    stop("method must be one of '2step' or 'joint'.")
+  }
+ 
+
+  model_choice <- ifelse(woodbury, "factor_model_eff", "factor_model")
+  data <- list(model=model_choice, n_factor=n_factor, dt=dt, Y=data, 
+	       lam=as.double(lam), nu=as.double(nu))
+  adfun <- TMB::MakeADFun(data=data,
+                          parameters=init_param,
+			  map = map,
+			  random = "x",
+			  DLL = "mnfa_TMBExports",
+			  silent = silent)
+  if (!adfun_only){
+    start_t <- Sys.time()
+    fit <- nlminb(adfun$par, adfun$fn, adfun$gr)
+    rep <- TMB::sdreport(adfun, getJointPrecision = TRUE)
+    t_taken <- as.numeric(difftime(Sys.time(), start_t, units="secs"))
+    lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L
+    lmat_varimax <- varimax(lmat_hat)$loadings[1:n_cell,]
+    lmat_basis_cov <- rep$cov.fixed # might need to modify this by adding SDREPORT(Sig) in hpp
+    env <- list(start_time = start_t,
+                nlminb_fit = fit,
+                tmb_report = rep,
+                n_factor = n_factor,
+                n_cell = n_cell,
+                n_bin = n_bin,
+                n_trial = n_trial,
+                dt = dt)
+    out <- list(time = t_taken,
+		log_k_hat = log_k_hat,
+		log_a_hat = log_a_hat,
+	        logk_se = logk_se,
+		loga_se = loga_se,
+		lmat_hat = lmat_hat,
+		lmat_basis_cov = lmat_basis_cov,
+		lmat_varimax = lmat_varimax,
+		env = env)
+    class(out) <- "fastr_fit"
+    return(out)    
+  }
+  else{
+    return(adfun)
+  }  
+}

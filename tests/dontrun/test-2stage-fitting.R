@@ -1,24 +1,24 @@
 set.seed(123)
 require(TMB)
 dt <- 0.005
-n_bin <- 2000
-n_cell <- 10
+n_bin <- 1000
+n_cell <- 8
 n_factor <- 2
-n_trial <- 10
+n_trial <- 3
 k <- runif(n_cell, 0.1, 0.6)
 alpha <- runif(n_cell, 2, 5.5)
 l1 <- runif(n_cell, 0.1, 0.25)
 l2 <- runif(n_cell, 0.1, 0.25)
-l1[1:5] <- runif(5, 0.7, 0.95)
-l2[6:10] <- runif(5, 0.7, 0.95)
+l1[1:(n_cell/2)] <- runif(n_cell/2, 0.7, 0.95)
+l2[(n_cell/2+1):n_cell] <- runif(n_cell/2, 0.7, 0.95)
 L <- cbind(l1, l2)
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
 
 all_mle <- get_ig_mle(Y, dt)
-log_k_mle <- log(all_mle$lam)/2
-log_a_mle <- log_k_mle - log(all_mle$mu)
+log_k_mle <- all_mle$log_k
+log_a_mle <- all_mle$log_a
 init_param <- list(log_k = log_k_mle,
                    log_a = log_a_mle,
                    Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
