@@ -20,7 +20,7 @@ Type factor_model_eff(objective_function<Type>* obj){
   PARAMETER_VECTOR(log_a); // log drift (0<drift<1)
   PARAMETER_VECTOR(Lt); // dq-d(d-1)/2 vector of the lower triangular elements of L (by column)
   PARAMETER_ARRAY(x); // q x n x r neuron paths
-  
+ 
   using namespace density;
   using namespace fastr;
   
@@ -34,7 +34,6 @@ Type factor_model_eff(objective_function<Type>* obj){
   // transformed parameters
   vector<Type> k = exp(log_k);
   vector<Type> alpha = exp(log_a);
-  
   // negative log-likelihood computation
   MVN_FA<Type> latent_nll(Lt, n_cell, n_factor, dt); // efficiently compute density of MVN using the Woodbury formula
   vector<Type> reg = Lt*Lt; // l2 (ridge) regularization 
