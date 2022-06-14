@@ -66,8 +66,9 @@ A list of class \code{fastr_fit} containing the following objects:
 \item loga_se: standard errors of \code{log_a_hat},
 \item logk_se: standard errors of \code{log_k_hat},
 \item lmat_hat: estimate of the loading matrix L,
-\item lmat_basis_cov: covariance matrix of the raw computational basis of L,
 \item lmat_varimax: Varimax-transformed loading matrix estimate,
+\item lmat_unnorm_hat: estimate of the unnormalized L
+\item lmat_unnorm_cov: covariance matrix of the unnormalized L,
 \item env: Other objects in the environment created during model fitting.
 }
 }

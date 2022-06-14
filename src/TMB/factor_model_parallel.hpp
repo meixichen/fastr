@@ -40,6 +40,7 @@ Type factor_model_parallel(objective_function<Type>* obj){
   Sig_FA.create(Sig, Lt);
   Sig2rho<Type>(rho, Sig, n_cell);
   ADREPORT(rho);
+  ADREPORT(Sig);
 
   // negative log-likelihood computation
   MVNORM_t<Type> latent_nll(Sig*dt); // MVN distn for the increments of latent path x
@@ -66,7 +67,6 @@ Type factor_model_parallel(objective_function<Type>* obj){
       }
     }
   }
-  REPORT(Sig);
   return nll;
 
 }

@@ -36,8 +36,9 @@
 #' - loga_se: standard errors of `log_a_hat`,
 #' - logk_se: standard errors of `log_k_hat`,
 #' - lmat_hat: estimate of the loading matrix L,
-#' - lmat_basis_cov: covariance matrix of the raw computational basis of L,
 #' - lmat_varimax: Varimax-transformed loading matrix estimate,
+#' - lmat_unnorm_hat: estimate of the unnormalized L
+#' - lmat_unnorm_cov: covariance matrix of the unnormalized L,
 #' - env: Other objects in the environment created during model fitting.
 #' @export
 
@@ -48,7 +49,7 @@ fa_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
   n_trial <- dim(data)[3]
   
   if (method == "2step"){
-    all_mle <- get_ig_mle(data_pre, dt)
+    all_mle <- get_ig_mle(data, dt)
     log_k_hat <- all_mle$log_k
     log_a_hat <- all_mle$log_a
     hess <- all_mle$hess
@@ -74,13 +75,14 @@ fa_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
  
 
   model_choice <- ifelse(woodbury, "factor_model_eff", "factor_model")
+  lam <- ifelse(n_cell<10, 1, 0.5)
   data <- list(model=model_choice, n_factor=n_factor, dt=dt, Y=data, 
 	       lam=as.double(lam), nu=as.double(nu))
   adfun <- TMB::MakeADFun(data=data,
                           parameters=init_param,
 			  map = map,
 			  random = "x",
-			  DLL = "mnfa_TMBExports",
+			  DLL = "fastr_TMBExports",
 			  silent = silent)
   if (!adfun_only){
     start_t <- Sys.time()
@@ -89,7 +91,9 @@ fa_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
     t_taken <- as.numeric(difftime(Sys.time(), start_t, units="secs"))
     lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L
     lmat_varimax <- varimax(lmat_hat)$loadings[1:n_cell,]
-    lmat_basis_cov <- rep$cov.fixed # might need to modify this by adding SDREPORT(Sig) in hpp
+    lmat_unnorm_hat <- rep$par.fixed[which(names(rep$par.fixed)=="Lt")]
+    lmat_unnorm_cov <- rep$cov.fixed[which(colnames(rep$cov.fixed)=="Lt"),
+				     which(colnames(rep$cov.fixed)=="Lt")] 
     env <- list(start_time = start_t,
                 nlminb_fit = fit,
                 tmb_report = rep,
@@ -104,8 +108,9 @@ fa_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
 	        logk_se = logk_se,
 		loga_se = loga_se,
 		lmat_hat = lmat_hat,
-		lmat_basis_cov = lmat_basis_cov,
 		lmat_varimax = lmat_varimax,
+		lmat_unnorm_hat = lmat_unnorm_hat,
+		lmat_unnorm_cov = lmat_unnorm_cov,
 		env = env)
     class(out) <- "fastr_fit"
     return(out)    

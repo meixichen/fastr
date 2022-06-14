@@ -58,7 +58,7 @@ Type factor_model_eff(objective_function<Type>* obj){
     }
   }
   matrix<Type> Sig = latent_nll.cov();
-  REPORT(Sig);
+  ADREPORT(Sig);
   return nll;
 
 }
