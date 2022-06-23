@@ -28,7 +28,7 @@
 #' @param ... Additional arguments to be passed to the optimization function
 #' `nlminb()`
 #' @details If the spike train data comes in the form of spike times, it can be
-#' converted to the format accepted by `fa_fit()` using the function `num2bin()`.
+#' converted to the format accepted by `fastr_fit()` using the function `num2bin()`.
 #' @return A list of class `fastr_fit` containing the following objects:
 #' - time: time taken for model fitting,
 #' - log_a_hat: estimates of log drift parameters `a`,
@@ -42,7 +42,7 @@
 #' - env: Other objects in the environment created during model fitting.
 #' @export
 
-fa_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
+fastr_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
 		   woodbury=T, silent=F, adfun_only=F, ...){
   n_cell <- dim(data)[1]
   n_bin <- dim(data)[2]
