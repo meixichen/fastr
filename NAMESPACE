@@ -3,7 +3,7 @@
 export(bin2num)
 export(compute_Rnll)
 export(cor2real)
-export(fa_fit)
+export(fastr_fit)
 export(fill_cor_mat)
 export(get_FA_estim)
 export(get_ig_mle)

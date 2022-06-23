@@ -30,7 +30,7 @@
 #' @details If the spike train data comes in the form of spike times, it can be
 #' converted to the format accepted by `fastr_fit()` using the function `num2bin()`.
 #' @return A list of class `fastr_fit` containing the following objects:
-#' - time: time taken for model fitting,
+#' - time: time taken for model fitting in seconds,
 #' - log_a_hat: estimates of log drift parameters `a`,
 #' - log_k_hat: estimates of log threshold parameters `k`,
 #' - loga_se: standard errors of `log_a_hat`,
@@ -88,6 +88,15 @@ fastr_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
     start_t <- Sys.time()
     fit <- nlminb(adfun$par, adfun$fn, adfun$gr)
     rep <- TMB::sdreport(adfun, getJointPrecision = TRUE)
+    if (method == "joint"){
+      k_ind <- which(names(fit$par)=="log_k")
+      a_ind <- which(names(fit$par)=="log_a")
+      log_k_hat <- fit$par[k_ind]
+      log_a_hat <- fit$par[a_ind]
+      all_se <- diag(rep$cov.fixed)
+      logk_se <- all_se[k_ind]
+      loga_se <- all_se[a_ind]
+    }
     t_taken <- as.numeric(difftime(Sys.time(), start_t, units="secs"))
     lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L
     lmat_varimax <- varimax(lmat_hat)$loadings[1:n_cell,]
