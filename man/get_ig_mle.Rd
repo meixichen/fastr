@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_ig_mle.R
 \name{get_ig_mle}
 \alias{get_ig_mle}
-\title{Calculate the MLEs for mu and lambda of an inverse Gaussian distribution}
+\title{Calculate the MLEs for parameters of an inverse Gaussian distribution}
 \usage{
 get_ig_mle(Y, dt)
 }
@@ -16,7 +16,7 @@ get_ig_mle(Y, dt)
 A list of MLEs and Hessian matrix of the (log) parameters c(log_k, log_a).
 }
 \description{
-Calculate the MLEs for mu and lambda of an inverse Gaussian distribution
+Calculate the MLEs for parameters of an inverse Gaussian distribution
 }
 \details{
 Let T be the vector of all ISIs. MLEs are calculated by\preformatted{\\hat\{\\mu\} = \\bar\{T\}, \\hat\{\\lambda\} = n/\\sum_\{i=1\}^n(1/T_i - 1/\\bar\{T\}).

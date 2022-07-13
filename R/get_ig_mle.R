@@ -1,4 +1,4 @@
-#' Calculate the MLEs for mu and lambda of an inverse Gaussian distribution
+#' Calculate the MLEs for parameters of an inverse Gaussian distribution
 #'
 #' @param Y A `q x n x r` or `n x r` array of 0/1 spike trains where `q` is the number of cells, 
 #' `n` is the number of time bins, and `r` is the number of trials.

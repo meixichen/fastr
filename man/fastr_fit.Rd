@@ -8,7 +8,7 @@ fastr_fit(
   data,
   dt,
   n_factor,
-  init,
+  init = NULL,
   method = "2step",
   lam = NULL,
   nu = 15,
@@ -31,7 +31,9 @@ data is in the form of spike times.}
 \code{log_k}  both of length \code{n_cell}, and the lower triangular entries of the loading
 matrix \code{Lt} of length \code{n_cell*n_factor-n_factor*(n_factor-1)/2}.
 If \code{method="2steps"}, only the initial values for the lower triangular loading
-matrix needs to be provided in the form of \code{list(Lt = Lt_init_values)}.}
+matrix can to be provided in the form of \code{list(Lt = Lt_init_values)}. Default is
+\verb{list(Lt=rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2))' if 2-step method is used, or }list(log_k=logk_mle, log_a=loga_mle, Lt=rep(1,
+n_cell\emph{n_factor-n_factor}(n_factor-1)/2))` if joint method is used.}
 
 \item{method}{Estimation method: "2step" or "joint".
 Default is "2step" : the first step is estimating drift \code{a} and threshold \code{k}
@@ -60,7 +62,7 @@ purposes only.}
 \value{
 A list of class \code{fastr_fit} containing the following objects:
 \itemize{
-\item time: time taken for model fitting,
+\item time: time taken for model fitting in seconds,
 \item log_a_hat: estimates of log drift parameters \code{a},
 \item log_k_hat: estimates of log threshold parameters \code{k},
 \item loga_se: standard errors of \code{log_a_hat},

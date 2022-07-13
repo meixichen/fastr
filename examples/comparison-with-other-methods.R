@@ -23,7 +23,7 @@ adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
                                         dt=dt, Y=Y, lam=1, nu=15.),
                                   parameters=init_param,
                                   random = "x",
-                                  DLL = "mnfa_TMBExports",
+                                  DLL = "fastr_TMBExports",
                                   silent = F)
 t_start <- Sys.time()
 fit_tmb <- nlminb(adfun$par, adfun$fn, adfun$gr)
@@ -32,19 +32,19 @@ time_tmb <- difftime(Sys.time(), t_start, units="mins")
 
 # Fix k and a to MLEs
 ig_mles <- get_ig_mle(Y, dt=dt)
-k_hat <- sqrt(ig_mles$lam)
-alpha_hat <- k_hat/ig_mles$mu
-init_param2 <- list(log_k = log(k_hat), 
-		    log_a = log(alpha_hat), 
+logk_hat <- ig_mles$log_k
+loga_hat <- ig_mles$log_a
+init_param2 <- list(log_k = logk_hat, 
+		    log_a = loga_hat, 
 		    Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
-		    x = prop_paths(Y, dt, log_k=log(k_hat), log_a=log(alpha_hat)))
+		    x = prop_paths(Y, dt, log_k=logk_hat, log_a=loga_hat))
 adfun2 <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
                                         dt=dt, Y=Y, lam=1, nu=15.),
                                   parameters=init_param2,
 				  map = list(log_k = as.factor(rep(NA, n_cell)),
 					     log_a = as.factor(rep(NA, n_cell))),
                                   random = "x",
-                                  DLL = "mnfa_TMBExports",
+                                  DLL = "fastr_TMBExports",
                                   silent = F)
 
 t_start <- Sys.time()

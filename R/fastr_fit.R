@@ -9,7 +9,10 @@
 #' `log_k`  both of length `n_cell`, and the lower triangular entries of the loading
 #' matrix `Lt` of length `n_cell*n_factor-n_factor*(n_factor-1)/2`. 
 #' If `method="2steps"`, only the initial values for the lower triangular loading 
-#' matrix needs to be provided in the form of `list(Lt = Lt_init_values)`.
+#' matrix can to be provided in the form of `list(Lt = Lt_init_values)`. Default is
+#' `list(Lt=rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2))' if 2-step method is used,
+#' or `list(log_k=logk_mle, log_a=loga_mle, Lt=rep(1,
+#' n_cell*n_factor-n_factor*(n_factor-1)/2))` if joint method is used.
 #' @param method Estimation method: "2step" or "joint". 
 #' Default is "2step" : the first step is estimating drift `a` and threshold `k`
 #' marginally using an inverse Gaussian model for each neuron independently, and the
@@ -42,31 +45,47 @@
 #' - env: Other objects in the environment created during model fitting.
 #' @export
 
-fastr_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
+fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, nu=15,
 		   woodbury=T, silent=F, adfun_only=F, ...){
   n_cell <- dim(data)[1]
   n_bin <- dim(data)[2]
   n_trial <- dim(data)[3]
   
+  # Get k and a MLE 
+  all_mle <- get_ig_mle(data, dt)
+  log_k_hat <- all_mle$log_k
+  log_a_hat <- all_mle$log_a
+  hess <- all_mle$hess
+  logk_se <- diag(hess)[1:n_cell]
+  loga_se <- diag(hess)[(n_cell+1):(2*n_cell)]
+  
   if (method == "2step"){
-    all_mle <- get_ig_mle(data, dt)
-    log_k_hat <- all_mle$log_k
-    log_a_hat <- all_mle$log_a
-    hess <- all_mle$hess
-    logk_se <- diag(hess)[1:n_cell]
-    loga_se <- diag(hess)[(n_cell+1):(2*n_cell)]
+    if (is.null(init)){
+      Lt <- rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2) 
+    }
+    else{
+      Lt <- init$Lt
+    }
     init_param <- list(log_k = log_k_hat,
 		       log_a = log_a_hat,
-		       Lt = init$Lt,
-                       x = prop_paths(data, dt, log_k_hat, log_a_hat))
+		       Lt = Lt,
+		       x = prop_paths(data, dt, log_k_hat, log_a_hat))
     map <- list(log_k=rep(factor(NA), n_cell),
                 log_a=rep(factor(NA), n_cell))		       
   }
   else if (method == "joint"){
-    init_param <- list(log_k = init$log_k,
-		       log_a = init$log_a,
-		       Lt = init$Lt,
-                       x = prop_paths(data, dt, init$log_k, init$log_a))
+    if (is.null(init)){
+      init_param <- list(log_k = log_k_hat,
+			 log_a = log_a_hat,
+                         Lt <- rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2), 
+			 x = prop_paths(data, dt, log_k_hat, log_a_hat))
+    }
+    else{
+      init_param <- list(log_k = init$log_k,
+			 log_a = init$log_a,
+			 Lt = init$Lt,
+			 x = prop_paths(data, dt, init$log_k, init$log_a))
+    }
     map <- NULL
   }
   else{
@@ -78,6 +97,8 @@ fastr_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
   lam <- ifelse(n_cell<10, 1, 0.5)
   data <- list(model=model_choice, n_factor=n_factor, dt=dt, Y=data, 
 	       lam=as.double(lam), nu=as.double(nu))
+  
+  if (!silent) cat("Building the ADFun...\n")
   adfun <- TMB::MakeADFun(data=data,
                           parameters=init_param,
 			  map = map,
@@ -87,6 +108,7 @@ fastr_fit <- function(data, dt, n_factor, init, method="2step", lam=NULL, nu=15,
   if (!adfun_only){
     start_t <- Sys.time()
     fit <- nlminb(adfun$par, adfun$fn, adfun$gr)
+    if (!silent) cat("Finished optimization. Starting sdreport...\n")
     rep <- TMB::sdreport(adfun, getJointPrecision = TRUE)
     if (method == "joint"){
       k_ind <- which(names(fit$par)=="log_k")
