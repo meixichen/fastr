@@ -13,7 +13,7 @@
 #' k/alpha, lambda=k^2/sigma^2.
 #' @export
 get_ig_mle <- function(Y, dt){
-  if (length(dim(Y)) == 3) {
+  if (length(dim(Y)) == 3 & dim(Y)[3] > 1) {
     n_cell <- dim(Y)[1]
     hess <- matrix(0, nrow=2*n_cell, ncol=2*n_cell)
     mu_hat <- rep(NA, n_cell)
@@ -42,7 +42,8 @@ get_ig_mle <- function(Y, dt){
     neworder <- c(seq(1,(2*n_cell), by=2), seq(2, (2*n_cell), by=2))
     hess <- hess[neworder, neworder] # order by k and then a
   } 
-  else if (length(dim(Y)) == 2) {
+  else if (length(dim(Y)) == 2 | dim(Y)[3]==1) {
+    if (dim(Y)[3]==1) Y <- Y[,,1]
     all_ISI <- unlist(apply(Y, 2, 
 			    function(y) { diff(which(y==1)*dt) }))
     n <- length(all_ISI)
