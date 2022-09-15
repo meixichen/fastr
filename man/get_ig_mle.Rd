@@ -7,10 +7,12 @@
 get_ig_mle(Y, dt)
 }
 \arguments{
-\item{Y}{A \verb{q x n x r} or \verb{n x r} array of 0/1 spike trains where \code{q} is the number of cells,
+\item{Y}{A \verb{q x n x r} or \verb{n x r} array of 0/1 spike trains
+where \code{q} is the number of cells,
 \code{n} is the number of time bins, and \code{r} is the number of trials.}
 
-\item{dt}{Scalar of length of the bins.}
+\item{dt}{Scalar of length of the bins.
+If TRUE, the data only contains 1 trial. If FALSE, 1 neuron.}
 }
 \value{
 A list of MLEs and Hessian matrix of the (log) parameters c(log_k, log_a).

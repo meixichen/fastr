@@ -1,8 +1,10 @@
 #' Calculate the MLEs for parameters of an inverse Gaussian distribution
 #'
-#' @param Y A `q x n x r` or `n x r` array of 0/1 spike trains where `q` is the number of cells, 
+#' @param Y A `q x n x r` or `n x r` array of 0/1 spike trains 
+#' where `q` is the number of cells, 
 #' `n` is the number of time bins, and `r` is the number of trials.
 #' @param dt Scalar of length of the bins.
+#' If TRUE, the data only contains 1 trial. If FALSE, 1 neuron.
 #' @return A list of MLEs and Hessian matrix of the (log) parameters c(log_k, log_a).
 #' @details Let T be the vector of all ISIs. MLEs are calculated by 
 #' ```
@@ -13,7 +15,7 @@
 #' k/alpha, lambda=k^2/sigma^2.
 #' @export
 get_ig_mle <- function(Y, dt){
-  if (length(dim(Y)) == 3 & dim(Y)[3] > 1) {
+  if (length(dim(Y)) == 3) { # More than 1 trial
     n_cell <- dim(Y)[1]
     hess <- matrix(0, nrow=2*n_cell, ncol=2*n_cell)
     mu_hat <- rep(NA, n_cell)
@@ -21,8 +23,14 @@ get_ig_mle <- function(Y, dt){
     log_k_hat <- rep(NA, n_cell)
     log_a_hat <- rep(NA, n_cell)
     for (i in 1:n_cell){
-      neuron_i_isi <- unlist(apply(Y[i,,], 2, 
+      if (dim(Y)[3]>1){
+        neuron_i_isi <- unlist(apply(Y[i,,], 2, 
 				   function(y) {diff(which(y==1)*dt)} ))
+      }
+      else{ # only one trial
+	y_i <- Y[i,,]
+        neuron_i_isi <- diff(which(y_i==1)*dt)
+      }
       n <- length(neuron_i_isi)
       mu_hat[i] <- mean(neuron_i_isi)
       lam_hat[i] <- n/sum(1/neuron_i_isi - 1/mu_hat[i])
@@ -42,8 +50,7 @@ get_ig_mle <- function(Y, dt){
     neworder <- c(seq(1,(2*n_cell), by=2), seq(2, (2*n_cell), by=2))
     hess <- hess[neworder, neworder] # order by k and then a
   } 
-  else if (length(dim(Y)) == 2 | dim(Y)[3]==1) {
-    if (dim(Y)[3]==1) Y <- Y[,,1]
+  else if (length(dim(Y)) == 2) { # only one neuron
     all_ISI <- unlist(apply(Y, 2, 
 			    function(y) { diff(which(y==1)*dt) }))
     n <- length(all_ISI)

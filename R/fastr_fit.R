@@ -54,7 +54,7 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
   n_bin <- dim(data)[2]
   n_trial <- dim(data)[3]
   
-  # Get k and a MLE 
+  # Get k and a MLE
   all_mle <- get_ig_mle(data, dt)
   log_k_hat <- all_mle$log_k
   log_a_hat <- all_mle$log_a
