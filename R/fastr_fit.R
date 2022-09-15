@@ -77,7 +77,7 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
     if (is.null(init)){
       init_param <- list(log_k = log_k_hat,
 			 log_a = log_a_hat,
-                         Lt <- rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2), 
+                         Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2), 
 			 x = prop_paths(data, dt, log_k_hat, log_a_hat))
     }
     else{
