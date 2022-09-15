@@ -19,8 +19,10 @@ A list of MLEs and Hessian matrix of the (log) parameters c(log_k, log_a).
 Calculate the MLEs for parameters of an inverse Gaussian distribution
 }
 \details{
-Let T be the vector of all ISIs. MLEs are calculated by\preformatted{\\hat\{\\mu\} = \\bar\{T\}, \\hat\{\\lambda\} = n/\\sum_\{i=1\}^n(1/T_i - 1/\\bar\{T\}).
-}
+Let T be the vector of all ISIs. MLEs are calculated by
+
+\if{html}{\out{<div class="sourceCode">}}\preformatted{\\hat\{\\mu\} = \\bar\{T\}, \\hat\{\\lambda\} = n/\\sum_\{i=1\}^n(1/T_i - 1/\\bar\{T\}).
+}\if{html}{\out{</div>}}
 
 If this IG distribution represents the distribution of first passage time of a
 Wiener process with threshold k, drift alpha and variance sigma^2, then mu =
