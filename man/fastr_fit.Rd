@@ -15,6 +15,7 @@ fastr_fit(
   woodbury = T,
   silent = F,
   adfun_only = F,
+  control = list(eval.max = 500, iter.max = 500),
   ...
 )
 }
@@ -59,6 +60,8 @@ the covariance matrix? Default is T.}
 
 \item{adfun_only}{Only outputs of ADFun created by TMB? This is for debugging
 purposes only.}
+
+\item{control}{A list of control parameters to pass to \code{nlminb()}.}
 
 \item{...}{Additional arguments to be passed to the optimization function
 \code{nlminb()}}

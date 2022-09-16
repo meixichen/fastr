@@ -31,6 +31,7 @@
 #' @param silent Suppress model fitting messages?
 #' @param adfun_only Only outputs of ADFun created by TMB? This is for debugging
 #' purposes only. 
+#' @param control A list of control parameters to pass to `nlminb()`.
 #' @param ... Additional arguments to be passed to the optimization function
 #' `nlminb()`
 #' @details If the spike train data comes in the form of spike times, it can be
@@ -49,7 +50,8 @@
 #' @export
 
 fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, nu=15,
-		   woodbury=T, silent=F, adfun_only=F, ...){
+		   woodbury=T, silent=F, adfun_only=F, 
+		   control=list(eval.max=500, iter.max=500), ...){
   n_cell <- dim(data)[1]
   n_bin <- dim(data)[2]
   n_trial <- dim(data)[3]
@@ -122,9 +124,11 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
 			  silent = silent)
   if (!adfun_only){
     start_t <- Sys.time()
-    fit <- nlminb(adfun$par, adfun$fn, adfun$gr)
+    fit <- nlminb(adfun$par, adfun$fn, adfun$gr, control=control)
+    time_nlminb <- difftime(Sys.time(), start_t, units="secs")
     if (!silent) cat("Finished optimization. Starting sdreport...\n")
     rep <- TMB::sdreport(adfun, getJointPrecision = TRUE)
+    time_sdrep <- difftime(Sys.time(), start_t, units="secs") - time_nlminb
     if (method == "joint"){
       k_ind <- which(names(fit$par)=="log_k")
       a_ind <- which(names(fit$par)=="log_a")
@@ -141,6 +145,8 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
     lmat_unnorm_cov <- rep$cov.fixed[which(colnames(rep$cov.fixed)=="Lt"),
 				     which(colnames(rep$cov.fixed)=="Lt")] 
     env <- list(start_time = start_t,
+		time_nlminb = time_nlminb,
+		time_sdrep = time_sdrep,
                 nlminb_fit = fit,
                 tmb_report = rep,
                 n_factor = n_factor,
