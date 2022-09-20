@@ -19,12 +19,12 @@ x <- sim$x
 
 # Fix k and a to MLEs
 ig_mles <- get_ig_mle(Y, dt=dt)
-k_hat <- sqrt(ig_mles$lam)
-alpha_hat <- k_hat/ig_mles$mu
-init_param2 <- list(log_k = log(k_hat),
-                    log_a = log(alpha_hat),
+logk_hat <- ig_mles$log_k
+loga_hat <- ig_mles$log_a
+init_param2 <- list(log_k = logk_hat,
+                    log_a = loga_hat,
                     Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
-                    x = prop_paths(Y, dt, log_k=log(k_hat), log_a=log(alpha_hat)))
+                    x = prop_paths(Y, dt, log_k=logk_hat, log_a=loga_hat))
 
 ############### Notations ################ 
 # theta1 = (log(k), log(alpha)) 
@@ -40,7 +40,7 @@ adfun1 <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
                                         dt=dt, Y=Y, lam=1, nu=15.),
                                   parameters=init_param2,
                                   random = "x",
-                                  DLL = "mnfa_TMBExports",
+                                  DLL = "fastr_TMBExports",
                                   silent = F)
 # Marginal estimation (with theta1 plugged in)
 adfun2 <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
@@ -49,7 +49,7 @@ adfun2 <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
                                   map = list(log_k = as.factor(rep(NA, n_cell)),
                                              log_a = as.factor(rep(NA, n_cell))),
                                   random = "x",
-                                  DLL = "mnfa_TMBExports",
+                                  DLL = "fastr_TMBExports",
                                   silent = F)
 
 t_start <- Sys.time()
@@ -60,8 +60,8 @@ time_tmb2 <- difftime(Sys.time(), t_start, units="mins")
 L_est <- fit_tmb2$par
 x_est <- rep2$par.random
 
-marg_params <- list(log_k = log(k_hat),
-		    log_a = log(alpha_hat),
+marg_params <- list(log_k = logk_hat,
+		    log_a = loga_hat,
 		    Lt = L_est)
 # \partial L2 / \partial theta1
 gr_l2_t1 <- adfun1$gr(unlist(marg_params))[1:(2*n_cell)] 
@@ -111,7 +111,7 @@ all_ISI <- apply(Y, 1,
 		   unlist(apply(yy, 2, function(y) { diff(which(y==1)*dt) }))
 		 })
 # We expect below to be zero
-calc_gr_l1_t1(all_ISI, log(k_hat), log(alpha_hat))
+calc_gr_l1_t1(all_ISI, logk_hat, loga_hat)
 
 R4 <- matrix(0, nrow=n_cell*2, ncol=length(L_est)) #---------------------------- R4
 
@@ -133,7 +133,7 @@ ig_loglik <- function(theta, ISI){
 }
 R1 <- matrix(0, nrow=2*n_cell, ncol=2*n_cell)
 for (i in 1:n_cell){
-  hess_comp <- hessian(ig_loglik, c(log(k_hat[i]), log(alpha_hat[i])), 
+  hess_comp <- hessian(ig_loglik, c(logk_hat[i], loga_hat[i]), 
 		       ISI=all_ISI[[i]])
   idx <- (2*(i-1)+1):(2*i)
   R1[idx, idx] <- hess_comp
@@ -141,7 +141,7 @@ for (i in 1:n_cell){
 R1 <- -R1
 
 # Another way to calculate the Hessian
-fit <- optim(par=c(log(k_hat[i]), log(alpha_hat[i])),
+fit <- optim(par=c(logk_hat[i], loga_hat[i]),
 	     # theta=c(log_k, log_alpha)
 	     fn=function(theta){-sum(dinvgaussian(all_ISI[[i]],
 						  exp(theta[1]-theta[2]), 
@@ -152,7 +152,7 @@ fit <- optim(par=c(log(k_hat[i]), log(alpha_hat[i])),
 R1_ana <- matrix(0, nrow=2*n_cell, ncol=2*n_cell)
 for (i in 1:n_cell){
   n <- length(all_ISI[[i]])
-  temp <- n*k_hat[i]*alpha_hat[i]
+  temp <- n*exp(logk_hat[i]+loga_hat[i])
   hess_ana <- matrix(c(-temp-2*n,temp,temp,-temp), ncol=2)
   idx <- (2*(i-1)+1):(2*i)
   R1_ana[idx, idx] <- hess_ana

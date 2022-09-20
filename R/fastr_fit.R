@@ -61,8 +61,9 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
   log_k_hat <- all_mle$log_k
   log_a_hat <- all_mle$log_a
   hess <- all_mle$hess
-  logk_se <- diag(hess)[1:n_cell]
-  loga_se <- diag(hess)[(n_cell+1):(2*n_cell)]
+  marg_cov <- solve(-hess)
+  logk_se <- diag(marg_cov)[1:n_cell]
+  loga_se <- diag(marg_cov)[(n_cell+1):(2*n_cell)]
   
   if (method == "2step"){
     if (is.null(init)){
@@ -159,6 +160,7 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
 		log_a_hat = log_a_hat,
 	        logk_se = logk_se,
 		loga_se = loga_se,
+		marg_cov = marg_cov,
 		lmat_hat = lmat_hat,
 		lmat_varimax = lmat_varimax,
 		lmat_unnorm_hat = lmat_unnorm_hat,
