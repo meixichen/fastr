@@ -62,6 +62,14 @@ if (run_joint_fit){
 ####### Check fitting with more or less factors #########
 fit2 <- fastr_fit(data=Y, dt=dt, n_factor=2, method="2step")
 fit6 <- fastr_fit(data=Y, dt=dt, n_factor=6, method="2step")
+pdf(paste0(save_path, "Est-Lambda-2factors.pdf"), width=3, height=7)
+par(mar=c(2,4,0.5,1))
+plot(fit2)
+dev.off()
+pdf(paste0(save_path, "Est-Lambda-6factors.pdf"), width=5, height=7)
+par(mar=c(2,4,0.5,1))
+plot(fit6)
+dev.off()
 
 ####### Accuracy check #############
 loga_lim <- range(log(alpha), loga_hat+2*loga_se, loga_hat-2*loga_se)
@@ -95,14 +103,16 @@ ggplot(mapping=aes(x=log(alpha)-log(k), y=lograte_hat)) +
 ggsave(paste0(save_path, "true-vs-est-lograte.pdf"), width=4, height=4)
 
 pdf(paste0(save_path, "True-Lambda.pdf"), width=4, height=7)
-par(mar=c(0.5,4,0.5,1))
-fields::image.plot(x=1:n_factor, y=1:n_cell, t(L), zlim=c(0,1),
-		   ylab="Neuron index", xlab="", xaxt="n")
+par(mar=c(2,4,0.5,1))
+fields::image.plot(x=1:n_factor, y=1:n_cell,
+       z=t(L), zlim=c(-1,1),
+       ylab="Neuron index", xlab="", axes=FALSE)
+axis(1, at=1:n_factor, tick=FALSE)
+axis(2, at=1:n_cell, labels=1:n_cell, las=2, tick=FALSE)
 dev.off()
 pdf(paste0(save_path, "Est-Lambda.pdf"), width=4, height=7)
-par(mar=c(0.5,4,0.5,1))
-fields::image.plot(x=1:n_factor, y=1:n_cell, t(fit_2step$lmat_varimax), zlim=c(0,1),
-		   ylab="Neuron index", xlab="", xaxt="n")
+par(mar=c(2,4,0.5,1))
+plot(fit_2step)
 dev.off()
 
 ############# Compare with simple correlation plot on Y ##################
