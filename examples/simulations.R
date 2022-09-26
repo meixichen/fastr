@@ -43,6 +43,11 @@ loga_se <- fit_2step$loga_se
 logk_se <- fit_2step$logk_se
 lograte_hat <- loga_hat-logk_hat
 lograte_se <- sqrt(loga_se^2+logk_se^2) # <------- need to change
+cor4 <- (fit_2step$lmat_hat) %*% t(fit_2step$lmat_hat)
+diag(cor4) <- 1
+true_cor <- L%*%t(L)
+diag(true_cor) <- 1
+err4 <- as.vector(cor4)[as.vector(cor4)!=1]-as.vector(true_cor)[as.vector(true_cor)!=1]
 
 run_joint_fit <- FALSE
 if (run_joint_fit){
@@ -58,18 +63,6 @@ if (run_joint_fit){
 # With 6 neurons, 2 factors, 2000 bins, and 5 trials, 
 # the joint method is 6.8 times slower than the 2-step method even with 
 # initial values of a and k set to MLEs.
-
-####### Check fitting with more or less factors #########
-fit2 <- fastr_fit(data=Y, dt=dt, n_factor=2, method="2step")
-fit6 <- fastr_fit(data=Y, dt=dt, n_factor=6, method="2step")
-pdf(paste0(save_path, "Est-Lambda-2factors.pdf"), width=3, height=7)
-par(mar=c(2,4,0.5,1))
-plot(fit2)
-dev.off()
-pdf(paste0(save_path, "Est-Lambda-6factors.pdf"), width=5, height=7)
-par(mar=c(2,4,0.5,1))
-plot(fit6)
-dev.off()
 
 ####### Accuracy check #############
 loga_lim <- range(log(alpha), loga_hat+2*loga_se, loga_hat-2*loga_se)
@@ -102,17 +95,47 @@ ggplot(mapping=aes(x=log(alpha)-log(k), y=lograte_hat)) +
   theme_bw()
 ggsave(paste0(save_path, "true-vs-est-lograte.pdf"), width=4, height=4)
 
-pdf(paste0(save_path, "True-Lambda.pdf"), width=4, height=7)
+pdf(paste0(save_path, "True-Lambda.pdf"), width=3.4, height=7)
 par(mar=c(2,4,0.5,1))
-fields::image.plot(x=1:n_factor, y=1:n_cell,
-       z=t(L), zlim=c(-1,1),
+image(x=1:n_factor, y=1:n_cell,
+       z=t(L), zlim=c(-1,1), col=viridis::viridis(20),
        ylab="Neuron index", xlab="", axes=FALSE)
 axis(1, at=1:n_factor, tick=FALSE)
 axis(2, at=1:n_cell, labels=1:n_cell, las=2, tick=FALSE)
 dev.off()
-pdf(paste0(save_path, "Est-Lambda.pdf"), width=4, height=7)
+pdf(paste0(save_path, "Est-Lambda.pdf"), width=3.4, height=7)
 par(mar=c(2,4,0.5,1))
-plot(fit_2step)
+plot(fit_2step, legend=F)
+dev.off()
+
+####### Check fitting with more or less factors #########
+fit2 <- fastr_fit(data=Y, dt=dt, n_factor=2, method="2step")
+fit6 <- fastr_fit(data=Y, dt=dt, n_factor=6, method="2step")
+# Uniqueness of neurons 1-10 in 2-factor model
+uniq2 <- round((1-diag(Lam2 %*% t(Lam2)))[1:10], 2)
+# Estimated corrlation matrix
+cor2 <- (fit2$lmat_hat) %*% t(fit2$lmat_hat)
+diag(cor2) <- 1
+err2 <- as.vector(cor2)[as.vector(cor2)!=1]-as.vector(true_cor)[as.vector(true_cor)!=1]
+cor6 <- (fit6$lmat_hat) %*% t(fit6$lmat_hat)
+diag(cor6) <- 1
+err6 <- as.vector(cor6)[as.vector(cor6)!=1]-as.vector(true_cor)[as.vector(true_cor)!=1]
+pdf(paste0(save_path, "sim-boxplot-err.pdf"), width=5, height=3)
+par(mar=c(4, 3, 0.5, 1))
+boxplot(err2, err4, err6, xlab="Number of factors", 
+	names=c("2", "4", "6"),
+        ylim=c(-0.6,0.4), outcex=0.5)
+abline(h=0, lty="dashed", col="red")
+dev.off()
+
+cat(paste(uniq2, collapse=", "), "\n")
+pdf(paste0(save_path, "Est-Lambda-2factors.pdf"), width=2.5, height=7)
+par(mar=c(2,4,0.5,1))
+plot(fit2, legend=F)
+dev.off()
+pdf(paste0(save_path, "Est-Lambda-6factors.pdf"), width=5, height=7)
+par(mar=c(2,4,0.5,1))
+plot(fit6)
 dev.off()
 
 ############# Compare with simple correlation plot on Y ##################
