@@ -11,11 +11,11 @@ get_ig_mle(Y, dt)
 where \code{q} is the number of cells,
 \code{n} is the number of time bins, and \code{r} is the number of trials.}
 
-\item{dt}{Scalar of length of the bins.
-If TRUE, the data only contains 1 trial. If FALSE, 1 neuron.}
+\item{dt}{Scalar of length of the bins.}
 }
 \value{
-A list of MLEs and Hessian matrix of the (log) parameters c(log_k, log_a).
+A list of MLEs and Hessian matrix of the (log) parameters
+c(log_k, log_a) and the SEs of the IG parameters c(1/mu, lambda).
 }
 \description{
 Calculate the MLEs for parameters of an inverse Gaussian distribution

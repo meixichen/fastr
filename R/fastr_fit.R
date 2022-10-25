@@ -38,6 +38,9 @@
 #' converted to the format accepted by `fastr_fit()` using the function `num2bin()`.
 #' @return A list of class `fastr_fit` containing the following objects:
 #' - time: time taken for model fitting in seconds,
+#' - rate_hat: estimates of the firing rates (alpha/k),
+#' - lam_hat: estimates of the inverse Gaussian lambda parameters,
+#' - se_ig: SEs of the IG parameters (rates and lambda),
 #' - log_a_hat: estimates of log drift parameters `a`,
 #' - log_k_hat: estimates of log threshold parameters `k`,
 #' - loga_se: standard errors of `log_a_hat`,
@@ -60,8 +63,11 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
   all_mle <- get_ig_mle(data, dt)
   log_k_hat <- all_mle$log_k
   log_a_hat <- all_mle$log_a
-  hess <- all_mle$hess
-  marg_cov <- solve(-hess)
+  hess_ak <- all_mle$hess_ak
+  rate_hat <- all_mle$gamma
+  lam_hat <- all_mle$lambda
+  se_ig <- all_mle$se_ig
+  marg_cov <- solve(-hess_ak)
   logk_se <- diag(marg_cov)[1:n_cell]
   loga_se <- diag(marg_cov)[(n_cell+1):(2*n_cell)]
   
@@ -156,6 +162,9 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
                 n_trial = n_trial,
                 dt = dt)
     out <- list(time = t_taken,
+		rate_hat = rate_hat,
+		lam_hat = lam_hat,
+		se_ig = se_ig,
 		log_k_hat = log_k_hat,
 		log_a_hat = log_a_hat,
 	        logk_se = logk_se,

@@ -12,7 +12,7 @@
   legend = TRUE,
   ylab = "Neuron index",
   xlab = "",
-  col = viridis(12),
+  col = viridis::viridis(12),
   ...
 )
 }

@@ -41,8 +41,8 @@ loga_hat <- fit_2step$log_a_hat
 logk_hat <- fit_2step$log_k_hat
 loga_se <- fit_2step$loga_se
 logk_se <- fit_2step$logk_se
-lograte_hat <- loga_hat-logk_hat
-lograte_se <- sqrt(loga_se^2+logk_se^2) # <------- need to change
+rate_hat <- fit_2step$rate_hat
+rate_se <- fit_2step$se_ig[1:n_cell]
 cor4 <- (fit_2step$lmat_hat) %*% t(fit_2step$lmat_hat)
 diag(cor4) <- 1
 true_cor <- L%*%t(L)
@@ -67,7 +67,8 @@ if (run_joint_fit){
 ####### Accuracy check #############
 loga_lim <- range(log(alpha), loga_hat+2*loga_se, loga_hat-2*loga_se)
 logk_lim <- range(log(k), logk_hat+2*logk_se, logk_hat-2*logk_se)
-lograte_lim <- range(log(alpha)-log(k), lograte_hat+2*lograte_se, lograte_hat-2*lograte_se)
+rate_lim <- range(alpha/k, rate_hat+2*rate_se, 
+                  rate_hat-2*rate_se)
 ggplot(mapping=aes(x=log(alpha), y=loga_hat)) + 
   xlim(loga_lim)+ylim(loga_lim)+
   geom_point()+
@@ -86,14 +87,15 @@ ggplot(mapping=aes(x=log(k), y=logk_hat)) +
   theme_bw()
 ggsave(paste0(save_path, "true-vs-est-logk.pdf"), width=4, height=4)
 
-ggplot(mapping=aes(x=log(alpha)-log(k), y=lograte_hat)) + 
-  xlim(lograte_lim)+ylim(lograte_lim)+
+ggplot(mapping=aes(x=alpha/k, y=rate_hat)) + 
+  xlim(rate_lim)+ylim(rate_lim)+
   geom_point()+
-  geom_errorbar(aes(ymin=lograte_hat-2*lograte_se, ymax=lograte_hat+2*lograte_se), width=.02)+
+  geom_errorbar(aes(ymin=rate_hat-2*rate_se, ymax=rate_hat+2*rate_se), width=.02)+
   geom_abline(slope=1, linetype="dashed", color="red")+
-  labs(x=expression(log(alpha/k)), y=expression(widehat(log(alpha/k))))+
+  labs(x=expression(alpha/k), y=expression(widehat(alpha/k)))+
   theme_bw()
-ggsave(paste0(save_path, "true-vs-est-lograte.pdf"), width=4, height=4)
+ggsave(paste0(save_path, "true-vs-est-rate.pdf"), width=4, height=4)
+
 
 pdf(paste0(save_path, "True-Lambda.pdf"), width=3.4, height=7)
 par(mar=c(2,4,0.5,1))
@@ -139,16 +141,6 @@ plot(fit6)
 dev.off()
 
 ############# Compare with simple correlation plot on Y ##################
-neuron_index <- sample(1:n_cell)
-Y_cor <- cor(t(Y[neuron_index,,1]))
-colnames(Y_cor) <- rownames(Y_cor) <- neuron_index
-corrplot(Y_cor, order="hclust")
-# Comment: the correlation at the data level is already pretty strong,
-# so clusters can be identified by simple correlation.
-############# Competing method 1: simple k-means #########################
-# Added Gaussian noise
-Y.noisy <- Y + array(rnorm(length(Y), 0, 0.1), dim(Y))
-km.res <- kmeans(Y.noisy[,,1], center=5 )$cluster
 # Convolved with exponentially decaying kernel
 expdec.conv <- function(y, tau){
   T <- length(y)
@@ -162,7 +154,29 @@ expdec.conv <- function(y, tau){
   }
   out
 }
-Y.conv <- apply(Y, c(1,3), expdec.conv, tau=10)
+Y.conv <- apply(Y, c(1,3), expdec.conv, tau=5)
+get_lag_cc <- function(x,y,lag=0){ccf(x,y,lag.max=lag,plot=F)$acf[[1]]}
+Y_cor <- matrix(1, nrow=n_cell, ncol=n_cell)
+for (i in 1:n_cell){
+  for (j in 1:(n_cell-1)){
+    Y_cor[i,j] <- get_lag0_cc(Y.conv[,i,1], Y.conv[,j,1])
+    Y_cor[j,i] <- Y_cor[i,j]
+  }
+}
+colnames(Y_cor) <- rownames(Y_cor) <- 1:n_cell
+pdf(paste0(save_path, "convolved-Y.pdf"), height=3, width=9)
+par(mar=c(4,4.5,0.1,0.1))
+plot(Y.conv[1:1000,1,1], type="l", ylab="Convolved Y", xlab="Time (bin index)", 
+     cex.lab=1.5, cex.axis=1.5)
+points(which(Y[1,1:1000,1]==1), rep(0,sum(Y[1,1:1000,1])), pch="l", col="red")
+dev.off()
+
+pdf(paste0(save_path, "correlation-plot.pdf"), height=4, width=4.5)
+par(mar=c(0.1,3,3, 5))
+corrplot(Y_cor)
+dev.off()
+
+############# Competing method 1: simple k-means  #########################
 km.res.conv <- kmeans(t(Y.conv[,,1]), center=2)$cluster
 ############# Competing method 2: fuzzy k-means ##########################
 library(fclust)
@@ -191,10 +205,10 @@ image(x=1, y=1:n_cell, matrix(km.res, ncol=n_cell), ylab="",
       xlab="", xaxt="n", yaxt="n",
       main="K-means assigned group memberships")
 axis(side=2, at=seq(1,n_cell,by=1))
-image(x=1, y=1:n_cell, matrix(fa.res, ncol=n_cell), ylab="", 
-      xlab="", xaxt="n", yaxt="n",
       main="K-means applied on factor loadings")
 axis(side=2, at=seq(1,n_cell,by=1))
 
 
 
+library(ggplot2)
+library(fields)

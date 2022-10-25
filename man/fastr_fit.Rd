@@ -70,6 +70,9 @@ purposes only.}
 A list of class \code{fastr_fit} containing the following objects:
 \itemize{
 \item time: time taken for model fitting in seconds,
+\item rate_hat: estimates of the firing rates (alpha/k),
+\item lam_hat: estimates of the inverse Gaussian lambda parameters,
+\item se_ig: SEs of the IG parameters (rates and lambda),
 \item log_a_hat: estimates of log drift parameters \code{a},
 \item log_k_hat: estimates of log threshold parameters \code{k},
 \item loga_se: standard errors of \code{log_a_hat},

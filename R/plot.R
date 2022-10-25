@@ -12,7 +12,7 @@
 plot.fastr_fit <- function(fit, neuron_lab=NULL,
 			   varimax=TRUE, zlim=c(-1,1), legend=TRUE,
 			   ylab="Neuron index", xlab="", 
-			   col=viridis(12), ...){
+			   col=viridis::viridis(12), ...){
   n_cell <- fit$env$n_cell
   n_factor <- fit$env$n_factor
   if (is.null(neuron_lab)) neuron_lab <- 1:n_cell
