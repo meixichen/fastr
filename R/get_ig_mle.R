@@ -17,7 +17,7 @@
 get_ig_mle <- function(Y, dt){
   if (length(dim(Y)) == 3) { # More than 1 trial
     n_cell <- dim(Y)[1]
-  } else if (length(dim(Y)) == 1) { # only one neuron
+  } else if (length(dim(Y)) == 2) { # only one neuron
     n_cell <- 1
   } else {
     stop("Check the dimension of Y.")
