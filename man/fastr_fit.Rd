@@ -81,6 +81,8 @@ A list of class \code{fastr_fit} containing the following objects:
 \item lmat_varimax: Varimax-transformed loading matrix estimate,
 \item lmat_unnorm_hat: estimate of the unnormalized L
 \item lmat_unnorm_cov: covariance matrix of the unnormalized L,
+\item paths: point estimates of the latent paths. Use \verb{array(output$paths, c(n_cell,n_bin,n_trial)} to convert the estimated paths to an array format.
+\item paths_se: corresponding standard errors for the paths.
 \item env: Other objects in the environment created during model fitting.
 }
 }

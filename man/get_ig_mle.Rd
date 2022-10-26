@@ -21,10 +21,8 @@ c(log_k, log_a) and the SEs of the IG parameters c(1/mu, lambda).
 Calculate the MLEs for parameters of an inverse Gaussian distribution
 }
 \details{
-Let T be the vector of all ISIs. MLEs are calculated by
-
-\if{html}{\out{<div class="sourceCode">}}\preformatted{\\hat\{\\mu\} = \\bar\{T\}, \\hat\{\\lambda\} = n/\\sum_\{i=1\}^n(1/T_i - 1/\\bar\{T\}).
-}\if{html}{\out{</div>}}
+Let T be the vector of all ISIs. MLEs are calculated by\preformatted{\\hat\{\\mu\} = \\bar\{T\}, \\hat\{\\lambda\} = n/\\sum_\{i=1\}^n(1/T_i - 1/\\bar\{T\}).
+}
 
 If this IG distribution represents the distribution of first passage time of a
 Wiener process with threshold k, drift alpha and variance sigma^2, then mu =

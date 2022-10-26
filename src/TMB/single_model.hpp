@@ -1,7 +1,13 @@
-#include <TMB.hpp>
+#ifndef single_model_hpp
+#define single_model_hpp
+
+#include "fastr/utils.hpp"
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR obj
 
 template<class Type>
-Type objective_function<Type>::operator() (){
+Type single_model(objective_function<Type>* obj){
   // data inputs                                                                                       
   DATA_SCALAR(dt); // length of the time bin                                                           
   DATA_ARRAY(Y); //  n x r array of 0s and 1s    
@@ -45,4 +51,9 @@ Type objective_function<Type>::operator() (){
   }
   return nll;
 }
+
+#undef TMB_OBJECTIVE_PTR
+#define TMB_OBJECTIVE_PTR this
+
+#endif
 

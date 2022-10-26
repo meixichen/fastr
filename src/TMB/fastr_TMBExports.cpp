@@ -5,6 +5,7 @@
 #include "factor_model_eff.hpp"
 #include "factor_model_parallel.hpp"
 #include "factor_model.hpp"
+#include "single_model.hpp"
 
 template<class Type>
 Type objective_function<Type>::operator() () {
@@ -15,6 +16,8 @@ Type objective_function<Type>::operator() () {
     return factor_model_parallel(this);
   } else if(model == "factor_model") {
     return factor_model(this);
+  } else if(model == "single_model") {
+    return single_model(this);
   } else {
     Rf_error("Unknown model.");
   }

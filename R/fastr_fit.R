@@ -49,16 +49,33 @@
 #' - lmat_varimax: Varimax-transformed loading matrix estimate,
 #' - lmat_unnorm_hat: estimate of the unnormalized L
 #' - lmat_unnorm_cov: covariance matrix of the unnormalized L,
+#' - paths: point estimates of the latent paths. Use `array(output$paths,
+#' c(n_cell,n_bin,n_trial)` to convert the estimated paths to an array format.
+#' - paths_se: corresponding standard errors for the paths.
 #' - env: Other objects in the environment created during model fitting.
 #' @export
 
 fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, nu=15,
 		   woodbury=T, silent=F, adfun_only=F, 
 		   control=list(eval.max=500, iter.max=500), ...){
-  n_cell <- dim(data)[1]
-  n_bin <- dim(data)[2]
-  n_trial <- dim(data)[3]
+  if (length(dim(data))==3){ # multiple neurons
+    n_cell <- dim(data)[1]
+    n_bin <- dim(data)[2]
+    n_trial <- dim(data)[3]
+  } else if (length(dim(data))==2){ # single neuron
+    n_cell <- 1
+    n_bin <- dim(data)[1]
+    n_trial <- dim(data)[2]
+    woodbury <- FALSE # DO NOT use the woodbury for single neuron model as it will crash R
+    n_factor <- 1 # override whatever n_factor that is specified
+    method <- "joint" # canNOT use two-step method for single neuron model
+  } else{
+    stop("Check the dimension of data, which must be either `n_cell x n_bin x n_trial`, or 
+	 `n_bin x n_trial` for a single neuron.")
+  }
   
+  if (n_factor < 1) stop("n_factor must be an integer >= 1.")
+
   # Get k and a MLE
   all_mle <- get_ig_mle(data, dt)
   log_k_hat <- all_mle$log_k
@@ -117,10 +134,16 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
   }
  
 
-  model_choice <- ifelse(woodbury, "factor_model_eff", "factor_model")
-  lam <- ifelse(n_cell<10, 1, 0.5)
-  data <- list(model=model_choice, n_factor=n_factor, dt=dt, Y=data, 
-	       lam=as.double(lam), nu=as.double(nu))
+  if (n_cell == 1){
+    model_choice <- "single_model"
+    data <- list(model=model_choice, dt=dt, Y=data, nu=as.double(nu))
+    init_param <- init_param[-which(names(init_param)=="Lt")] # rm Lt from param list
+  } else{
+    model_choice <- ifelse(woodbury, "factor_model_eff", "factor_model")
+    lam <- ifelse(n_cell<10, 1, 0.5)
+    data <- list(model=model_choice, n_factor=n_factor, dt=dt, Y=data, 
+   	         lam=as.double(lam), nu=as.double(nu))
+  }
   
   if (!silent) cat("Building the ADFun...\n")
   adfun <- TMB::MakeADFun(data=data,
@@ -146,11 +169,16 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
       loga_se <- all_se[a_ind]
     }
     t_taken <- as.numeric(difftime(Sys.time(), start_t, units="secs"))
-    lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L
-    lmat_varimax <- varimax(lmat_hat)$loadings[1:n_cell,]
-    lmat_unnorm_hat <- rep$par.fixed[which(names(rep$par.fixed)=="Lt")]
-    lmat_unnorm_cov <- rep$cov.fixed[which(colnames(rep$cov.fixed)=="Lt"),
-				     which(colnames(rep$cov.fixed)=="Lt")] 
+    if (n_factor==1){ # no loading mat if only 1 factor is used 
+      lmat_hat <- lmat_varimax <- lmat_unnorm_hat <- lmat_unnorm_cov <- NULL
+    }
+    else{
+      lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L
+      lmat_varimax <- varimax(lmat_hat)$loadings[1:n_cell,]
+      lmat_unnorm_hat <- rep$par.fixed[which(names(rep$par.fixed)=="Lt")]
+      lmat_unnorm_cov <- rep$cov.fixed[which(colnames(rep$cov.fixed)=="Lt"),
+       				     which(colnames(rep$cov.fixed)=="Lt")] 
+    }
     env <- list(start_time = start_t,
 		time_nlminb = time_nlminb,
 		time_sdrep = time_sdrep,
@@ -174,6 +202,8 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
 		lmat_varimax = lmat_varimax,
 		lmat_unnorm_hat = lmat_unnorm_hat,
 		lmat_unnorm_cov = lmat_unnorm_cov,
+		paths = rep$par.random,
+		paths_se = sqrt(rep$diag.cov.random),
 		env = env)
     class(out) <- "fastr_fit"
     return(out)    
@@ -181,4 +211,4 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
   else{
     return(adfun)
   }  
-}
+ }
