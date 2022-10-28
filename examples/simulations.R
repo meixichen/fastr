@@ -34,6 +34,33 @@ cat(paste(round(t(L)[2,],2), collapse=" & "), "\n")
 cat(paste(round(t(L)[3,],2), collapse=" & "), "\n")
 cat(paste(round(t(L)[4,],2), collapse=" & "), "\n")
 
+####### Choose n_factor #########
+# Fit a single neuron model to each of the neurons
+allpaths <- matrix(0, nrow=n_bin, ncol=n_cell)
+for (i in 1:n_cell){
+  cat("Fitting neuron ", i, "...\n")
+  Yi <- array(Y[i,,], c(n_bin, n_trial))
+  fit_i <- fastr_fit(data=Yi, dt=dt, silent=TRUE)
+  allpaths[, i] <- fit_i$paths
+}
+
+get_cumvar <- function(lmat){
+  cumsum(colSums(lmat^2)/nrow(lmat))
+}
+
+# Do an elbow plot
+d_max <- 10
+cumvars <- rep(NA, d_max)
+for (d in 1:d_max){
+  fa.res <- factanal(diff(allpaths), d)
+  temp <- get_cumvar(fa.res$loadings)
+  cumvars[d] <- temp[d]
+}
+pdf("choose-d.pdf", width=7, height=4)
+plot(1:d_max, cumvars, type="l", ylab="Cumulative variance explained", xlab="Number of factors")
+abline(v=n_factor, lty="dashed", col="green", lwd=3)
+legend("bottomright", legend="True number of factors", lty="dashed", col="green", lwd=3)
+dev.off()
 
 ####### Model fitting #############
 fit_2step <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, method="2step")
