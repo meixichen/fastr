@@ -1,5 +1,6 @@
 library(ggplot2)
 library(fields)
+library(heatmaply)
 devtools::load_all()
 set.seed(123)
 save_path <- "~/Thesis_proposal/"
@@ -20,6 +21,9 @@ l2[6:10] <- runif(5, 0.7, 0.95)
 l3[11:15] <- runif(5, 0.7, 0.95)
 l4[16:20] <- runif(5, 0.7, 0.95)
 L <- cbind(l1, l2, l3, l4)
+true_cor <- L%*%t(L)
+Psi <- 1-diag(true_cor) 
+diag(true_cor) <- 1
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 
@@ -33,6 +37,8 @@ cat(paste(round(t(L)[1,],2), collapse=" & "), "\n")
 cat(paste(round(t(L)[2,],2), collapse=" & "), "\n")
 cat(paste(round(t(L)[3,],2), collapse=" & "), "\n")
 cat(paste(round(t(L)[4,],2), collapse=" & "), "\n")
+cat("Psi:\n")
+cat(paste(round(Psi,2), collapse=", "), "\n")
 
 ####### Choose n_factor #########
 # Fit a single neuron model to each of the neurons
@@ -56,7 +62,7 @@ for (d in 1:d_max){
   temp <- get_cumvar(fa.res$loadings)
   cumvars[d] <- temp[d]
 }
-pdf("choose-d.pdf", width=7, height=4)
+pdf(paste0(save_path, "choose-d.pdf"), width=7, height=4)
 plot(1:d_max, cumvars, type="l", ylab="Cumulative variance explained", xlab="Number of factors")
 abline(v=n_factor, lty="dashed", col="green", lwd=3)
 legend("bottomright", legend="True number of factors", lty="dashed", col="green", lwd=3)
@@ -72,9 +78,7 @@ rate_hat <- fit_2step$rate_hat
 rate_se <- fit_2step$se_ig[1:n_cell]
 cor4 <- (fit_2step$lmat_hat) %*% t(fit_2step$lmat_hat)
 diag(cor4) <- 1
-true_cor <- L%*%t(L)
-diag(true_cor) <- 1
-err4 <- as.vector(cor4)[as.vector(cor4)!=1]-as.vector(true_cor)[as.vector(true_cor)!=1]
+err4 <- cor4[lower.tri(cor4)] - true_cor[lower.tri(true_cor)]
 
 run_joint_fit <- FALSE
 if (run_joint_fit){
@@ -141,14 +145,15 @@ dev.off()
 fit2 <- fastr_fit(data=Y, dt=dt, n_factor=2, method="2step")
 fit6 <- fastr_fit(data=Y, dt=dt, n_factor=6, method="2step")
 # Uniqueness of neurons 1-10 in 2-factor model
+Lam2 <- fit2$lmat_varimax
 uniq2 <- round((1-diag(Lam2 %*% t(Lam2)))[1:10], 2)
 # Estimated corrlation matrix
 cor2 <- (fit2$lmat_hat) %*% t(fit2$lmat_hat)
 diag(cor2) <- 1
-err2 <- as.vector(cor2)[as.vector(cor2)!=1]-as.vector(true_cor)[as.vector(true_cor)!=1]
+err2 <- cor2[lower.tri(cor2)] - true_cor[lower.tri(true_cor)]
 cor6 <- (fit6$lmat_hat) %*% t(fit6$lmat_hat)
 diag(cor6) <- 1
-err6 <- as.vector(cor6)[as.vector(cor6)!=1]-as.vector(true_cor)[as.vector(true_cor)!=1]
+err6 <- cor6[lower.tri(cor6)] - true_cor[lower.tri(true_cor)]
 pdf(paste0(save_path, "sim-boxplot-err.pdf"), width=5, height=3)
 par(mar=c(4, 3, 0.5, 1))
 boxplot(err2, err4, err6, xlab="Number of factors", 
@@ -182,11 +187,17 @@ expdec.conv <- function(y, tau){
   out
 }
 Y.conv <- apply(Y, c(1,3), expdec.conv, tau=5)
-get_lag_cc <- function(x,y,lag=0){ccf(x,y,lag.max=lag,plot=F)$acf[[1]]}
+get_lag_cc <- function(x, y, lag=0, nonsig=0){
+  n <- length(x)
+  cor <- ccf(x,y,lag.max=lag,plot=F)$acf[[1]]
+  sig <- 2/sqrt(n)
+  if (abs(cor) > abs(sig)) return(cor)
+  else return(nonsig)
+}
 Y_cor <- matrix(1, nrow=n_cell, ncol=n_cell)
 for (i in 1:n_cell){
   for (j in 1:(n_cell-1)){
-    Y_cor[i,j] <- get_lag0_cc(Y.conv[,i,1], Y.conv[,j,1])
+    Y_cor[i,j] <- get_lag_cc(Y.conv[,i,1], Y.conv[,j,1])
     Y_cor[j,i] <- Y_cor[i,j]
   }
 }
@@ -203,39 +214,5 @@ par(mar=c(0.1,3,3, 5))
 corrplot(Y_cor)
 dev.off()
 
-############# Competing method 1: simple k-means  #########################
-km.res.conv <- kmeans(t(Y.conv[,,1]), center=2)$cluster
-############# Competing method 2: fuzzy k-means ##########################
-library(fclust)
-fkm.res <- FKM(Y.noisy[,,1], k=2, m=1.2)$clus
-fkm.res.conv <- FKM(t(Y.conv[,,1]), k=2, m=1.2)$clus
+heatmaply_cor(Y_cor)
 
-
-############# Factor model: applying k-means on the loading matrix ############
-res <- readRDS("TH2015results_cluster.rds")
-fit <- res$fit
-n_cell <- 43
-n_factor <- 6
-L <- varimax(get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L)$loadings[1:n_cell,]
-fa.res <- kmeans(L, centers=5)$cluster
-
-############# Plotting #############################
-n_cell <- 43
-n_factor <- 6
-true.group <- c(rep(1, 2), rep(2,8), rep(3,15), rep(4,8), rep(5,10))
-par(mfrow=c(1,4))
-image(x=1, y=1:n_cell, matrix(true.group, ncol=n_cell), ylab="Neuron index", 
-      xlab="", xaxt="n", yaxt="n",
-      main="True group memberships")
-axis(side=2, at=seq(1,n_cell,by=1))
-image(x=1, y=1:n_cell, matrix(km.res, ncol=n_cell), ylab="", 
-      xlab="", xaxt="n", yaxt="n",
-      main="K-means assigned group memberships")
-axis(side=2, at=seq(1,n_cell,by=1))
-      main="K-means applied on factor loadings")
-axis(side=2, at=seq(1,n_cell,by=1))
-
-
-
-library(ggplot2)
-library(fields)
