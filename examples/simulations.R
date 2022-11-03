@@ -42,30 +42,20 @@ cat(paste(round(Psi,2), collapse=", "), "\n")
 
 ####### Choose n_factor #########
 # Fit a single neuron model to each of the neurons
-allpaths <- matrix(0, nrow=n_bin, ncol=n_cell)
-for (i in 1:n_cell){
-  cat("Fitting neuron ", i, "...\n")
-  Yi <- array(Y[i,,], c(n_bin, n_trial))
-  fit_i <- fastr_fit(data=Yi, dt=dt, silent=TRUE)
-  allpaths[, i] <- fit_i$paths
-}
-
-get_cumvar <- function(lmat){
-  cumsum(colSums(lmat^2)/nrow(lmat))
-}
-
-# Do an elbow plot
 d_max <- 10
-cumvars <- rep(NA, d_max)
-for (d in 1:d_max){
-  fa.res <- factanal(diff(allpaths), d)
-  temp <- get_cumvar(fa.res$loadings)
-  cumvars[d] <- temp[d]
-}
-pdf(paste0(save_path, "choose-d.pdf"), width=7, height=4)
-plot(1:d_max, cumvars, type="l", ylab="Cumulative variance explained", xlab="Number of factors")
+d_res <- choose_n_factor(Y, dt, 1:d_max, plot=FALSE)
+d_seq <- 1:d_max; cumvars <- d_res$cumvars
+pdf(paste0(save_path, "choose-d.pdf"), width=10, height=4)
+par(mfrow=c(1,2))
+plot(d_seq, cumvars, type="l", ylab="Cumvar(d)",
+     xlab="Number of factors (d)",
+     cex.axis=1.2, cex.lab=1.3)
 abline(v=n_factor, lty="dashed", col="green", lwd=3)
-legend("bottomright", legend="True number of factors", lty="dashed", col="green", lwd=3)
+plot((d_seq[1]+1):tail(d_seq,1), diff(cumvars), type="l",
+     ylab="Cumvar(d) - Cumvar(d-1)",
+     xlab="Number of factors (d)",
+     cex.axis=1.2, cex.lab=1.3)
+abline(v=n_factor, lty="dashed", col="green", lwd=3)
 dev.off()
 
 ####### Model fitting #############
