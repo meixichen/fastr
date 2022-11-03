@@ -4,13 +4,17 @@
 \alias{rasterplot}
 \title{Raster plot of spike trains}
 \usage{
-rasterplot(data, ...)
+rasterplot(data, pch = "|", pt_cex = 0.9, ...)
 }
 \arguments{
 \item{data}{A \code{r} by \code{n} matrix / data frame, or a list of \code{r} vectors.
 If a matrix / df is provided, each row is a trial discretized into \code{n}
 time bins in which a spike is indicated by 1 and 0 otherwise.
 If a list is provided, each vector is a trial and contains the spike times.}
+
+\item{pch}{Point shape for \code{points()}.}
+
+\item{pt_cex}{Point size (cex) for \code{points()}.}
 
 \item{...}{Additional arguments to pass to \code{plot()}.}
 }

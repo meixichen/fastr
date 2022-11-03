@@ -4,11 +4,13 @@
 #' If a matrix / df is provided, each row is a trial discretized into `n`
 #' time bins in which a spike is indicated by 1 and 0 otherwise. 
 #' If a list is provided, each vector is a trial and contains the spike times.
+#' @param pch Point shape for `points()`.
+#' @param pt_cex Point size (cex) for `points()`.
 #' @param ... Additional arguments to pass to `plot()`.
 #' @return A raster plot
 #' @export
 
-rasterplot <- function(data, ...){
+rasterplot <- function(data, pch = "|", pt_cex = 0.9, ...){
   if (is.matrix(data) | is.data.frame(data)){
     n_trials <- nrow(data)
     n_bins <- ncol(data)
@@ -17,7 +19,7 @@ rasterplot <- function(data, ...){
     for (i in 1:n_trials){
       spike_ind <- which(data[i,]==1)
       n_spikes <- length(spike_ind)
-      points(spike_ind, rep(i, n_spikes), pch = "|")
+      points(spike_ind, rep(i, n_spikes), pch = pch, cex=pt_cex)
     }
   }
   else if (is.list(data)){
@@ -28,7 +30,7 @@ rasterplot <- function(data, ...){
     for (i in 1:n_trials){
       spike_times <- data[[i]]
       n_spikes <- length(spike_times)
-      points(spike_times, rep(i, n_spikes), pch = "|")
+      points(spike_times, rep(i, n_spikes), pch = pch, cex=pt_cex)
     }
   }
   else{
