@@ -39,9 +39,11 @@ models.}
 }
 \value{
 \enumerate{
-\item A vector of length \code{length(d_seq)} containing the cumulative proportion of
-variance explained by the corresponding number of factors (d).
-\item A plot that shows the relationship between the two.
+\item A vector of length \code{length(d_seq)} containing
+(1) the cumulative proportion of variance explained by the corresponding
+number of factors (if method='cumvar'), and (2) the min of the max loadings for the
+corresponding number of factors (if method='minmaxload').
+\item Plot of cumvar(d) versus d, plot of minmaxload(d) versus d.
 \item An array or a vector of all the single-neuron model fitted paths.
 }
 }
@@ -52,7 +54,26 @@ Perform exploratory factor analysis to choose the number of factors
 Given data with \code{q} neurons, a single-neuron model is fitted to each neuron
 to obtain \code{q} estimates of neuronal latent paths x_i for i=1,..., q. Then a factor
 analysis model with \code{d} factor is fitted to the matrix whose column i is the latent
-path increments dx_ij for neuron i. For each candidate \code{d} value in \code{d_seq}, the
-cumulative proportion of variance explained is extracted. The function (optionally)
-outputs a plot whose y-axis is the cumulative var and x-zxis is \code{d}.
+path increments dx_ij for neuron i. Using the estimated dx_ij, two methods will be
+employed to find the appropriate \code{d}.
+
+The 'cumvar' method calculates and, optionally, plots,
+the cumulative proportion of variance explained (between 0 and 1) for each
+model with the chosen number of \code{d}. One can look for the "elbow" in the plot
+to determine when an increase number of \code{d} no longer increases the variance
+explained.
+
+The 'minmaxload' method does the following:
+\enumerate{
+\item For each \code{d}, obtain the estimated loading matrix Lam(d).
+\item For each column (factor) of Lam(d), find the max absolute loading on it. If the
+max loading is a large value, this means that the corresponding factor contributes
+to explaining the activity of one or more neurons. As a result, for each Lam(d),
+we can obtain \code{d} max loading values.
+\item For each \code{d}, we can obtain the min of all \code{d} max loading values. If the min
+is small (say < 0.1), this means that there is at least a factor among the \code{d}
+factors that does not contribute much to explaining the commonality.
+Since we take the min of the max loadings for each \code{d}, this is called the
+'minmaxload' method.
+}
 }
