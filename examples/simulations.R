@@ -51,8 +51,8 @@ plot(d_seq, cumvars, type="l", ylab="Cumvar(d)",
      xlab="Number of factors (d)",
      cex.axis=1.2, cex.lab=1.3)
 abline(v=n_factor, lty="dashed", col="green", lwd=3)
-plot((d_seq[1]+1):tail(d_seq,1), diff(cumvars), type="l",
-     ylab="Cumvar(d) - Cumvar(d-1)",
+plot(d_seq[1]:tail(d_seq,2)[1], diff(cumvars), type="l",
+     ylab="Cumvar(d+1) - Cumvar(d)",
      xlab="Number of factors (d)",
      cex.axis=1.2, cex.lab=1.3)
 abline(v=n_factor, lty="dashed", col="green", lwd=3)
