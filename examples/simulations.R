@@ -43,18 +43,24 @@ cat(paste(round(Psi,2), collapse=", "), "\n")
 ####### Choose n_factor #########
 # Fit a single neuron model to each of the neurons
 d_max <- 10
-d_res <- choose_n_factor(Y, dt, 1:d_max, plot=FALSE)
-d_seq <- 1:d_max; cumvars <- d_res$cumvars
-pdf(paste0(save_path, "choose-d.pdf"), width=10, height=4)
-par(mfrow=c(1,2))
+d_seq <- 1:d_max
+d_res <- choose_n_factor(Y, dt, d_seq, plot=FALSE)
+cumvars <- d_res$cumvars
+pdf(paste0(save_path, "app-choose-d.pdf"), width=12, height=4)
+par(mfrow=c(1,3))
 plot(d_seq, cumvars, type="l", ylab="Cumvar(d)",
-     xlab="Number of factors (d)",
-     cex.axis=1.2, cex.lab=1.3)
+     xlab="Number of factors (d)", 
+     cex.axis=1.4, cex.lab=1.5)
 abline(v=n_factor, lty="dashed", col="green", lwd=3)
 plot(d_seq[1]:tail(d_seq,2)[1], diff(cumvars), type="l",
      ylab="Cumvar(d+1) - Cumvar(d)",
-     xlab="Number of factors (d)",
-     cex.axis=1.2, cex.lab=1.3)
+     xlab="Number of factors (d)", 
+     cex.axis=1.4, cex.lab=1.5)
+abline(v=n_factor, lty="dashed", col="green", lwd=3)
+plot(d_seq, d_res$minmaxload, type="l",
+     ylab="Min of max loadings per factor",
+     xlab="Number of factors (d)", 
+     cex.axis=1.4, cex.lab=1.5)
 abline(v=n_factor, lty="dashed", col="green", lwd=3)
 dev.off()
 
