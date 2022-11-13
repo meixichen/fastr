@@ -76,7 +76,7 @@ cor4 <- (fit_2step$lmat_hat) %*% t(fit_2step$lmat_hat)
 diag(cor4) <- 1
 err4 <- cor4[lower.tri(cor4)] - true_cor[lower.tri(true_cor)]
 
-run_joint_fit <- FALSE
+run_joint_fit <- TRUE
 if (run_joint_fit){
 	logk_hat <- fit_2step$log_k_hat
 	loga_hat <- fit_2step$log_a_hat
@@ -90,6 +90,63 @@ if (run_joint_fit){
 # With 6 neurons, 2 factors, 2000 bins, and 5 trials, 
 # the joint method is 6.8 times slower than the 2-step method even with 
 # initial values of a and k set to MLEs.
+
+####### 2-step vs joint in terms of parameter accuracy/precision #########
+log_a_2 <- fit_2step$log_a_hat
+log_k_2 <- fit_2step$log_k_hat
+rate_2 <- fit_2step$rate_hat
+lmat_2 <- fit_2step$lmat_unnorm_hat
+
+a_se_2 <- fit_2step$loga_se
+k_se_2 <- fit_2step$logk_se
+ell_se_2 <- diag(fit_2step$lmat_unnorm_cov)
+
+log_a_j <- fit_joint$log_a_hat
+log_k_j <- fit_joint$log_k_hat
+rate_j <- exp(log_a_j-log_k_j)
+lmat_j <- fit_joint$lmat_unnorm_hat
+
+a_se_j <- fit_joint$loga_se
+k_se_j <- fit_joint$logk_se
+ell_se_j <- diag(fit_joint$lmat_unnorm_cov)
+ell_se_diff <- ell_se_2 - ell_se_j
+pdf(paste0(save_path, "2step-vs-joint.pdf"), height=7, width=7)
+par(mfrow=c(2,2), mar=c(4,5,3,1))
+cex_lab<-1.5
+cex_main<-2
+plot(log_a_j, log_a_2, cex.lab=cex_lab, cex.main=cex_main, xlab=expression(hat(alpha)["joint"]), 
+     ylab=expression(hat(alpha)["2step"]), main=expression((a)~hat(alpha)))
+abline(0,1,lty="dashed", col="blue")
+plot(log_k_j, log_k_2, cex.lab=cex_lab, cex.main=cex_main, xlab=expression(hat(k)["joint"]), 
+     ylab=expression(hat(k)["2step"]), main=expression((b)~hat(k)))
+abline(0,1,lty="dashed", col="blue")
+plot(rate_j, rate_2, cex.lab=cex_lab, cex.main=cex_main, xlab=expression(widehat("rate")["joint"]), 
+     ylab=expression(widehat("rate")["2step"]), main=expression((c)~widehat("rate")))
+abline(0,1,lty="dashed", col="blue")
+plot(as.vector(lmat_j), as.vector(lmat_2), cex.lab=cex_lab, cex.main=cex_main,
+     xlab=expression(widehat(ell)["joint"]), 
+     ylab=expression(widehat(ell)["2step"]), main=expression((d)~widehat(ell)))
+abline(0,1,lty="dashed", col="blue")
+abline(0,-1,lty="dashed", col="blue")
+dev.off()
+
+pdf(paste0(save_path, "2step-vs-joint-ell-se.pdf"), height=4, width=12)
+par(mfrow=c(1,3), mar=c(4,5,3,1))
+cex_axis <- 1.4
+plot(ell_se_j, ell_se_2, xlim=c(0,60), ylim=c(0,60),
+     cex.lab=cex_lab, cex.main=cex_main, cex.axis=cex_axis,
+     xlab=expression("SE"(widehat(ell))["joint"]), 
+     ylab=expression("SE"(widehat(ell))["2step"]), 
+     main=expression("SE"(widehat(ell))))
+abline(0,1, lty="dashed")
+boxplot(ell_se_diff, cex.lab=cex_lab, cex.main=1.6, cex.axis=cex_axis,
+	main=expression("SE"(widehat(ell))["2step"]-"SE"(widehat(ell))["joint"]), 
+	ylab="Difference")
+boxplot(ell_se_diff, cex.lab=cex_lab, cex.main=1.6, cex.axis=cex_axis,
+	main=expression("SE"(widehat(ell))["2step"]-"SE"(widehat(ell))["joint"]("zoomed in")),
+	ylab="Difference",
+        ylim=c(-0.3,1.2))
+dev.off()
 
 ####### Accuracy check #############
 loga_lim <- range(log(alpha), loga_hat+2*loga_se, loga_hat-2*loga_se)
