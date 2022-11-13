@@ -13,6 +13,8 @@
   ylab = "Neuron index",
   xlab = "",
   col = viridis::viridis(12),
+  cex.axis.x = 1,
+  cex.axis.y = 0.9,
   ...
 )
 }
@@ -31,6 +33,10 @@
 
 \item{col}{Color palatte. Default is a color blindness friendly palatte
 from the viridis package.}
+
+\item{cex.axis.x}{Font size of the x-axis labels.}
+
+\item{cex.axis.y}{Font size of the y-axis labels.}
 
 \item{...}{Arguments supplied for the \code{image.plot()} function.}
 }
