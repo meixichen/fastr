@@ -203,8 +203,17 @@ plot(fit_2step, legend=F)
 dev.off()
 
 ####### Check fitting with more or less factors #########
-fit2 <- fastr_fit(data=Y, dt=dt, n_factor=2, method="2step")
-fit6 <- fastr_fit(data=Y, dt=dt, n_factor=6, method="2step")
+fit_diff_d <- FALSE
+if (fit_diff_d) {
+	fit2 <- fastr_fit(data=Y, dt=dt, n_factor=2, method="2step")
+	fit6 <- fastr_fit(data=Y, dt=dt, n_factor=6, method="2step")
+} else{
+	fit2 <- readRDS("fit-d-2.rds")
+	fit4 <- readRDS("fit-d-4.rds")
+	fit6 <- readRDS("fit-d-6.rds")
+	fit8 <- readRDS("fit-d-8.rds")
+	fit10 <- readRDS("fit-d-10.rds")
+}
 # Uniqueness of neurons 1-10 in 2-factor model
 Lam2 <- fit2$lmat_varimax
 uniq2 <- round((1-diag(Lam2 %*% t(Lam2)))[1:10], 2)
@@ -232,6 +241,17 @@ pdf(paste0(save_path, "Est-Lambda-6factors.pdf"), width=5, height=7)
 par(mar=c(2,4,0.5,1))
 plot(fit6)
 dev.off()
+
+if (!fit_diff_d){
+	pdf(paste0(save_path, "Est-Lambda-8factors.pdf"), width=5.5, height=7)
+	par(mar=c(2,4,0.5,1))
+	plot(fit8, legend=F)
+	dev.off()
+	pdf(paste0(save_path, "Est-Lambda-10factors.pdf"), width=6, height=7)
+	par(mar=c(2,4,0.5,1))
+	plot(fit10)
+	dev.off()
+}
 
 ############# Compare with simple correlation plot on Y ##################
 # Convolved with exponentially decaying kernel
