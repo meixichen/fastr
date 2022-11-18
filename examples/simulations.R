@@ -149,10 +149,10 @@ plot(ell_se_j, ell_se_2, xlim=c(0,8), ylim=c(0,8),
 abline(0,1, lty="dashed", col="blue")
 boxplot(ell_se_ratio, cex.lab=cex_lab, cex.main=cex_main, cex.axis=cex_axis,
 	main=expression("SE"(widehat(ell))["2step"]~"/"~"SE"(widehat(ell))["joint"]), 
-	ylab="Difference")
+	ylab="Ratio between SEs")
 boxplot(ell_se_ratio, cex.lab=cex_lab, cex.main=cex_main, cex.axis=cex_axis,
 	main=expression("SE"(widehat(ell))["2step"]~"/"~"SE"(widehat(ell))["joint"]("zoomed in")),
-	ylab="Difference",
+	ylab="Ratio between SEs",
         ylim=c(0.95,1.4))
 dev.off()
 
