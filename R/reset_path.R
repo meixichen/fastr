@@ -1,4 +1,5 @@
 #' Reset the latent path
+#'
 #' @param path A vector of the path which has not been reset.
 #' @param spks A vector of 0s and 1s for spikes, which must be the same
 #' length as `path`.
