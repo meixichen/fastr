@@ -34,7 +34,7 @@ plot_path <- function(path, se, reset=FALSE, spks=NULL, k=NULL,
                         path=path,
                         path_se=se,
                         spks=spks)
-  out <- ggplot(data=df_path, aes(time, path)) +
+  out <- ggplot2::ggplot(data=df_path, aes(time, path)) +
     geom_line(size = line_size) +
     geom_ribbon(aes(ymin=path-2*path_se, ymax=path+2*path_se),
                 alpha=alpha, fill = ci_fill,

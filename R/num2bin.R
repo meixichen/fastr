@@ -1,14 +1,16 @@
-#' Convert multiple neurons' data of spike times into the binary form
+#' Convert multiple neurons' data of spike times into a binned format
 #'
 #' @param data A list of data frames, each being a neuron's data from multiple trials. 
 #' Each column of the data frame is a trial containing spike times.
 #' @param dt Time bin length
 #' @param trial_len Length of a trial (in sec)
+#' @param binary Should the data be binned into a binary format?
 #' @return A q x n x r array, where q is the number of neurons, n is the number of time bins, 
-#' and r is the number of trials.
+#' and r is the number of trials. The elements in the array are the number of spikes for the
+#' corresponding neuron in the corresponding bin and trial.
 #' @export
 
-num2bin <- function(data, dt, trial_len){
+num2bin <- function(data, dt, trial_len, binary=TRUE){
   q <- length(data)
   r <- length(data[[1]])
   n <- ceiling(trial_len/dt)
@@ -18,9 +20,16 @@ num2bin <- function(data, dt, trial_len){
     for (j in 1:r){
       trial_num <- all_trials[,j] # single trial data in spike times    
       trial_bin <- rep(0, n) # single trial data in the binary form
-      which_spikes <- ceiling(trial_num/dt)
-      trial_bin[which_spikes[!is.na(which_spikes)]] <- 1
-      output[i, ,j] <- trial_bin
+      if (binary) {
+	which_spikes <- ceiling(trial_num/dt)
+        trial_bin[which_spikes[!is.na(which_spikes)]] <- 1
+        output[i, ,j] <- trial_bin
+      } else{
+        output[i, ,j] <- sapply(1:n, 
+	       function(u) {
+	         sum(trial_num/dt <= u & trial_num/dt > u-1, na.rm=TRUE)
+	       }) # Count the number of spikes in each (coarse) bin
+      }
     }
   }
   output

@@ -2,9 +2,9 @@
 % Please edit documentation in R/num2bin.R
 \name{num2bin}
 \alias{num2bin}
-\title{Convert multiple neurons' data of spike times into the binary form}
+\title{Convert multiple neurons' data of spike times into a binned format}
 \usage{
-num2bin(data, dt, trial_len)
+num2bin(data, dt, trial_len, binary = TRUE)
 }
 \arguments{
 \item{data}{A list of data frames, each being a neuron's data from multiple trials.
@@ -13,11 +13,14 @@ Each column of the data frame is a trial containing spike times.}
 \item{dt}{Time bin length}
 
 \item{trial_len}{Length of a trial (in sec)}
+
+\item{binary}{Should the data be binned into a binary format?}
 }
 \value{
 A q x n x r array, where q is the number of neurons, n is the number of time bins,
-and r is the number of trials.
+and r is the number of trials. The elements in the array are the number of spikes for the
+corresponding neuron in the corresponding bin and trial.
 }
 \description{
-Convert multiple neurons' data of spike times into the binary form
+Convert multiple neurons' data of spike times into a binned format
 }
