@@ -15,6 +15,7 @@ fastr_fit(
   woodbury = T,
   silent = F,
   adfun_only = F,
+  simplified = T,
   control = list(eval.max = 500, iter.max = 500),
   ...
 )
@@ -61,6 +62,9 @@ the covariance matrix? Default is T.}
 \item{adfun_only}{Only outputs of ADFun created by TMB? This is for debugging
 purposes only.}
 
+\item{simplified}{Should a simplified output be given? If true, the output
+saves 80 times more space.}
+
 \item{control}{A list of control parameters to pass to \code{nlminb()}.}
 
 \item{...}{Additional arguments to be passed to the optimization function
@@ -72,7 +76,7 @@ A list of class \code{fastr_fit} containing the following objects:
 \item time: time taken for model fitting in seconds,
 \item rate_hat: estimates of the firing rates (alpha/k),
 \item lam_hat: estimates of the inverse Gaussian lambda parameters,
-\item se_ig: SEs of the IG parameters (rates and lambda),
+\item se_ig (if simplified=FALSE): SEs of the IG parameters (rates and lambda),
 \item log_a_hat: estimates of log drift parameters \code{a},
 \item log_k_hat: estimates of log threshold parameters \code{k},
 \item loga_se: standard errors of \code{log_a_hat},
@@ -83,7 +87,8 @@ A list of class \code{fastr_fit} containing the following objects:
 \item lmat_unnorm_cov: covariance matrix of the unnormalized L,
 \item paths: point estimates of the latent paths. Use \verb{array(output$paths, c(n_cell,n_bin,n_trial)} to convert the estimated paths to an array format.
 \item paths_se: corresponding standard errors for the paths.
-\item env: Other objects in the environment created during model fitting.
+\item env: Other objects in the environment created during model fitting. If
+simplified=FALSE, TMB objects is included here.
 }
 }
 \description{
