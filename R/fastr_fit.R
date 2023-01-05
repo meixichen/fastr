@@ -31,6 +31,8 @@
 #' @param silent Suppress model fitting messages?
 #' @param adfun_only Only outputs of ADFun created by TMB? This is for debugging
 #' purposes only. 
+#' @param simplified Should a simplified output be given? If true, the output
+#' saves 80 times more space.
 #' @param control A list of control parameters to pass to `nlminb()`.
 #' @param ... Additional arguments to be passed to the optimization function
 #' `nlminb()`
@@ -40,7 +42,7 @@
 #' - time: time taken for model fitting in seconds,
 #' - rate_hat: estimates of the firing rates (alpha/k),
 #' - lam_hat: estimates of the inverse Gaussian lambda parameters,
-#' - se_ig: SEs of the IG parameters (rates and lambda),
+#' - se_ig (if simplified=FALSE): SEs of the IG parameters (rates and lambda),
 #' - log_a_hat: estimates of log drift parameters `a`,
 #' - log_k_hat: estimates of log threshold parameters `k`,
 #' - loga_se: standard errors of `log_a_hat`,
@@ -52,11 +54,12 @@
 #' - paths: point estimates of the latent paths. Use `array(output$paths,
 #' c(n_cell,n_bin,n_trial)` to convert the estimated paths to an array format.
 #' - paths_se: corresponding standard errors for the paths.
-#' - env: Other objects in the environment created during model fitting.
+#' - env: Other objects in the environment created during model fitting. If
+#' simplified=FALSE, TMB objects is included here.
 #' @export
 
 fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, nu=15,
-		   woodbury=T, silent=F, adfun_only=F, 
+		   woodbury=T, silent=F, adfun_only=F, simplified=T, 
 		   control=list(eval.max=500, iter.max=500), ...){
   if (length(dim(data))==3){ # multiple neurons
     n_cell <- dim(data)[1]
@@ -206,6 +209,7 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
 		paths_se = sqrt(rep$diag.cov.random),
 		env = env)
     class(out) <- "fastr_fit"
+    if (simplified) out <- simplify_output(out)
     return(out)    
   }
   else{
