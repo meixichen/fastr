@@ -1,0 +1,55 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# SpatialGEV
+
+<!-- badges: start -->
+<!--
+[![R-CMD-check](https://github.com/meixichen/fastr/workflows/R-CMD-check/badge.svg)](https://github.com/meixichen/fastr/actions)
+-->
+<!-- badges: end -->
+
+*Meixi Chen, Martin Lysy*
+
+---
+
+## Description
+
+The ***fastr*** (**F**actor **A**nalysis of **S**pike **T**rains in **R**) package 
+provides methods for analyzing neural spike trains simultaneously recorded from multiple neurons,
+with a focus on exploring the correlation between neurons. 
+
+## Installation
+
+Before installing ***fastr***, make sure you have ***TMB*** installed following the instructions [here](https://github.com/kaskr/adcomp/wiki/Download). 
+
+To download the development version of this package, run 
+```{r, eval=FALSE}
+devtools::install_github("meixichen/fastr")
+```
+
+## Factor analysis of multi-neuron spike trains
+
+The main method in this package models the multi-neuron spike trains within a factor analysis 
+framework. Simply put, it assumes that the unobserved neural dynamics $\boldsymbol{x}(t)\in\mathbb{R}^q$,
+which determines the observed spike trains $\boldsymbol{y}(t)\in\mathbb{R}^q$, can be written as
+$\boldsymbol{x}(t)=\boldsymbol{\Lambda}\boldsymbol{f}(t) + \boldsymbol{\epsilon}(t)$,
+where $\boldsymbol{f}(t)\in\mathbb{R}^d, \ d\ll q$ contains the independent "factors" and
+$\boldsymbol{\Lambda}_{q\times d}$ is the factor loading matrix. Model fitting is carried out using the
+main functionality in this package: `fastr_fit()`.
+
+## Usage 
+
+More to come here.
