@@ -7,14 +7,16 @@
 get_FA_estim(mod_fit, n_cell, n_factor)
 }
 \arguments{
-\item{mod_fit}{Fitted factor model output by nlminb(adfun)}
+\item{mod_fit}{Fitted factor model output by nlminb(adfun), or a vector of off
+diagonal elements of the loading matrix.}
 
 \item{n_cell}{Number of neurons}
 
 \item{n_factor}{Number of factors}
 }
 \value{
-A list of normalized L matrix and the firing rate ratio (a/k)
+A list of normalized L matrix and, if the model fit is provided, the firing
+rate ratio (a/k)
 }
 \description{
 Obtain L and a/k from model fit
