@@ -2,10 +2,12 @@ devtools::load_all()
 set.seed(123)
 require(TMB)
 
+dt <- 0.005
 n_bin <- 1000
 n_cell <- 8
 n_trial <- 3
 n_factor <- 2
+n_basis <- 20
 k <- runif(n_cell, 0.1, 0.6)
 alpha <- runif(n_cell, 2, 5.5)
 l1 <- runif(n_cell, 0.1, 0.25)
@@ -17,17 +19,21 @@ sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
 
-dt <- 0.005
-Y <- NULL  # q x n x r
-lam <- NULL  # regularization
-nu <- 20
-Phi <- NULL  # m x n
-T_len <- 10
+lam <- 1  # regularization
+nu <- 5. # sigmoid function scale
+T_len <- n_bin*dt  # total time length
 
-log_k <- -1
-log_a <- 0
-Lt <- NULL  # dq-d(d-1)/2 vector
-Xi <- NULL  # m x q x r 
+# basis function
+phi_x <- function(t, i){
+  coef <- (i-0.5)*pi
+  sqrt(2)*sin(coef*t/T_len)/coef
+}
+
+# Initial parameter values
+Phi_args <- expand.grid(seq(dt, T_len, by=dt), 1:n_basis)
+Phi <- t(matrix(apply(Phi_args, 1, function(row) phi_x(row[1], row[2])),
+		nrow=n_bin, ncol=n_basis))  # n_basis x n_bin
+Xi <- array(rnorm(n_basis*n_cell*n_trial), c(n_basis, n_cell, n_trial)) # n_basis x n_cell x n_trial 
 
 data <- list(model="factor_model_basis", 
 	     n_factor=n_factor,
@@ -37,9 +43,9 @@ data <- list(model="factor_model_basis",
 	     nu=nu,
 	     Phi=Phi,
 	     T=T_len)
-init_param <- list(log_k=log_k,
-		   log_a=log_a,
-		   Lt=Lt,
+init_param <- list(log_k=log(k),
+		   log_a=log(alpha),
+		   Lt=rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
 		   Xi=Xi)
 
 map <- list(log_k=rep(factor(NA), n_cell),
@@ -52,9 +58,11 @@ adfun <- TMB::MakeADFun(data=data,
                         DLL = "fastr_TMBExports",
                         silent = FALSE)
 
+# Without basis expansion it took around 40 secs
 start_t <- Sys.time()
-fit <- nlminb(adfun$par, adfun$fn, adfun$gr, control = list(eval.max=1000, iter.max=1000))
+fit <- nlminb(adfun$par, adfun$fn, adfun$gr)
 time_nlminb <- difftime(Sys.time(), start_t, units="secs")
+start_t <- Sys.time()
 rep <- sdreport(adfun, getJointPrecision=TRUE)
 time_sdrep <- difftime(Sys.time(), start_t, units="secs") - time_nlminb
 lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L

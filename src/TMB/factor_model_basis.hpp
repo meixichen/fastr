@@ -39,23 +39,21 @@ Type factor_model_basis(objective_function<Type>* obj){
   vector<Type> k = exp(log_k);
   vector<Type> alpha = exp(log_a);
   // negative log-likelihood computation
-  MVN_FA<Type> latent_nll(Lt, n_cell, n_factor, dt); // efficiently compute density of MVN using the Woodbury formula
+  MVN_FA<Type> latent_nll(Lt, n_cell, n_factor, 1.); // efficiently compute density of MVN using the Woodbury formula
   vector<Type> reg = Lt*Lt; // l2 (ridge) regularization 
   Type nll = lam*(reg.sum()); // negative log-likelihood penalization term
   vector<Type> mu(n_cell); // drift vector
   vector<Type> Nt(n_cell); // count the number of spikes up to and including time t for each neuron
-  matrix<Type> Xi_Phi; // q x n matrix of Xi_transpose times Phi for one trial
   for (int u=0;u<n_trial;u++){
     for(int w=0;w<n_basis;w++){
-      mu = Xi.col(u).col(w);  // ***** 
+      mu = Xi.col(u).transpose().col(w);   
       nll += latent_nll(mu);
     }
     Nt.fill(1); 
-    Xi_Phi = Xi.col(u).matrix().transpose() * Phi.matrix();
     for(int j=0;j<n_bin;j++){
       for (int i=0;i<n_cell;i++){
-        //nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);
-        nu_x = nu * (Xi_Phi(i,j)/sqrt(T) + alpha[i]*dt*(j+1) - Nt[i] * k[i]);  // *****
+        nu_x = nu * ((Xi.col(u).col(i) * Phi.col(j)).sum() * sqrt(T) + 
+			alpha[i]*dt*(j+1) - Nt[i] * k[i]);  // *****
         nll -= Y(i,j,u) * nu_x - log(1 + exp(nu_x)); // log Bernoulli dens with sigmoid prob
         Nt(i) += Y(i,j,u);
       }
