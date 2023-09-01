@@ -57,6 +57,24 @@ adfun <- TMB::MakeADFun(data=data,
                         random = "Xi",
                         DLL = "fastr_TMBExports",
                         silent = FALSE)
+# compare with two-stage fitting without basis expansion
+all_mle <- get_ig_mle(Y, dt)
+log_k_mle <- all_mle$log_k
+log_a_mle <- all_mle$log_a
+init_param <- list(log_k = log_k_mle,
+                   log_a = log_a_mle,
+                   Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
+                   x = prop_paths(Y, dt, log_k_mle, log_a_mle))
+cat("Data simulated.\n")
+
+adfun<- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor,
+                                 dt=dt, Y=Y, lam=1, nu=5.),
+                                 parameters=init_param,
+                                 map = list(log_k = rep(factor(NA), n_cell),
+                                            log_a = rep(factor(NA), n_cell)),
+                                 random = "x",
+                                 DLL = "fastr_TMBExports",
+                                 silent = F)
 
 # Without basis expansion it took around 40 secs
 start_t <- Sys.time()

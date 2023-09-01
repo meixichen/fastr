@@ -23,7 +23,6 @@ Type factor_model_eff(objective_function<Type>* obj){
  
   using namespace density;
   using namespace fastr;
-  
   // transformed data
   vector<int> Y_dim = Y.dim; // dimension of data Y (a 3d array)
   int n_cell = Y_dim(0); // number of neurons
@@ -40,6 +39,7 @@ Type factor_model_eff(objective_function<Type>* obj){
   Type nll = lam*(reg.sum()); // negative log-likelihood penalization term
   vector<Type> mu(n_cell); // drift vector
   vector<Type> Nt(n_cell); // count the number of spikes up to and including time t for each neuron
+
   for (int u=0;u<n_trial;u++){
     mu = x.col(u).col(0) - alpha * dt;
     nll += latent_nll(mu);
@@ -47,7 +47,9 @@ Type factor_model_eff(objective_function<Type>* obj){
       mu = x.col(u).col(w) - x.col(u).col(w-1) - alpha * dt;
       nll += latent_nll(mu);
     }
-    Nt.fill(1); 
+    Nt.fill(1);
+
+    auto start = std::chrono::high_resolution_clock::now();
     for(int j=0;j<n_bin;j++){
       for (int i=0;i<n_cell;i++){
         //nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);
@@ -56,7 +58,12 @@ Type factor_model_eff(objective_function<Type>* obj){
         Nt(i) += Y(i,j,u);
       }
     }
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Data likelihood evaluation took (in ms): " << std::endl;
+    std::cout << duration.count() << std::endl;
   }
+
   matrix<Type> Sig = latent_nll.cov();
   ADREPORT(Sig);
   return nll;

@@ -2,6 +2,7 @@
 #define factor_model_basis_hpp
 
 #include "fastr/utils.hpp"
+#include <chrono>
 
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
@@ -25,7 +26,6 @@ Type factor_model_basis(objective_function<Type>* obj){
  
   using namespace density;
   using namespace fastr;
-  
   // transformed data
   vector<int> Y_dim = Y.dim; // dimension of data Y (a 3d array)
   vector<int> Phi_dim = Phi.dim; // dimension of basis function array (3d)
@@ -44,12 +44,15 @@ Type factor_model_basis(objective_function<Type>* obj){
   Type nll = lam*(reg.sum()); // negative log-likelihood penalization term
   vector<Type> mu(n_cell); // drift vector
   vector<Type> Nt(n_cell); // count the number of spikes up to and including time t for each neuron
+  
   for (int u=0;u<n_trial;u++){
     for(int w=0;w<n_basis;w++){
       mu = Xi.col(u).transpose().col(w);   
       nll += latent_nll(mu);
     }
     Nt.fill(1); 
+
+    auto start = std::chrono::high_resolution_clock::now();
     for(int j=0;j<n_bin;j++){
       for (int i=0;i<n_cell;i++){
         nu_x = nu * ((Xi.col(u).col(i) * Phi.col(j)).sum() * sqrt(T) + 
@@ -58,7 +61,12 @@ Type factor_model_basis(objective_function<Type>* obj){
         Nt(i) += Y(i,j,u);
       }
     }
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    std::cout << "Data likelihood evaluation took (in ms): " << std::endl;
+    std::cout << duration.count() << std::endl;
   }
+  
   matrix<Type> Sig = latent_nll.cov();
   ADREPORT(Sig);
   return nll;
