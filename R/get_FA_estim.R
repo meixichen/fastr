@@ -9,9 +9,13 @@
 #' @export
 
 get_FA_estim <- function(mod_fit, n_cell, n_factor){
-  if (is.vector(mod_fit)){ 
-    off_diag_L_est <- mod_fit
-    fi <- NULL
+  if (!("par" %in% names(mod_fit))){
+    if (length(mod_fit) == n_cell*n_factor-n_factor*(n_factor-1)/2){ 
+      off_diag_L_est <- mod_fit
+      fi <- NULL
+    } else{
+      stop("mod_fit should be either an output of nlminb/optim, or a vector of Lt estimates.")
+    }
   } else{
     estimates <- mod_fit$par
     off_diag_L_est <- estimates[names(estimates)=="Lt"]
