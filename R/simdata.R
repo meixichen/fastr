@@ -24,10 +24,10 @@ simdata <- function(dt, n_bin, n_trial, alpha, k, rho, L){
     for (u in 1:n_trial){
       Nt <- 1
       for (t in 1:n_bin){
-	dx[t,u] <- rnorm(1, mean=alpha*dt, sd=sqrt(dt))
-        p_jump <- ifelse(sum(dx[1:t,u])>= Nt*k, 1, 0)
-	Y[t,u] <- rbinom(1, 1, p_jump)
-	Nt <- Nt + Y[t,u]
+      	dx[t,u] <- rnorm(1, mean=alpha*dt, sd=sqrt(dt))
+      	p_jump <- ifelse(sum(dx[1:t,u])>= Nt*k, 1, 0)
+      	Y[t,u] <- rbinom(1, 1, p_jump)
+      	Nt <- Nt + Y[t,u]
       }
     }
     x <- array(0, dim = c(n_bin, n_trial))
