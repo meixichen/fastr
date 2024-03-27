@@ -21,32 +21,28 @@ test_that("Factor models in C++ has same nll as the nll computed in R. ",{
                        Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
                        x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
     data <- list(n_factor=n_factor, dt=dt, Y=Y, lam=1, nu=5.)
-    
+
     #---- R nll --------------
     nll_r <- compute_Rnll(data, init_param)
-    
+
     #---- TMB model nll -----------
     # Efficient matrix inversion not applied
-    adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
-				      dt=dt, Y=Y, lam=1, nu=5.),
-                            parameters=init_param,
-                            DLL = "fastr_TMBExports", 
-                            silent = TRUE)
+    adfun <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, lam=1, nu=5., init=init_param,
+		       woodbury=FALSE, method="joint", silent=TRUE, adfun_only=TRUE,
+		       ignore_random=TRUE)
     nll_tmb <- adfun$fn(unlist(init_param)) # negative log-likelihood computed by TMB/C++
     expect_equal(nll_tmb, nll_r)
+
     # Efficient matrix inversion applied
-    adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, 
-					  dt=dt, Y=Y, lam=1, nu=5.),
-                            parameters=init_param,
-                            DLL = "fastr_TMBExports", 
-                            silent = TRUE)
-    
+    adfun_eff <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, lam=1, nu=5., init=init_param,
+			   woodbury=TRUE, method="joint", silent=TRUE, adfun_only=TRUE,
+			   ignore_random=TRUE)
     nll_tmb_eff <- adfun_eff$fn(unlist(init_param))
     expect_equal(nll_tmb_eff, nll_r)
   }
 })
 
-test_that("Optimization of the factor models converges and gives PD Hessian.",{
+test_that("2-step optimization of the factor model converges and gives PD Hessian.",{
   dt <- 0.005
   n_bin <- 2000
   k <- c(0.15, 0.3, 0.2, 0.27, 0.25)
@@ -64,28 +60,26 @@ test_that("Optimization of the factor models converges and gives PD Hessian.",{
                      log_a = rep(0, n_cell),
                      Lt = rep(1, n_cell*n_factor-n_factor*(n_factor-1)/2),
                      x = prop_paths(Y, dt, rep(-2, n_cell), rep(0, n_cell)))
-  
-  # Efficient matrix inversion not applied
-  adfun <- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
-				    dt=dt, Y=Y, lam=1, nu=5.),
-                          parameters=init_param,
-                          random = "x",
-                          DLL = "fastr_TMBExports", 
-                          silent = T)
-  mod_fit <- nlminb(adfun$par, adfun$fn, adfun$gr) # optimization
-  rep <- TMB::sdreport(adfun) # get Hessian
-  expect_equal(mod_fit$convergence, 0) # Expect convergence indicator is 0, i.e., nlminb has converged
-  expect_true(rep$pdHess) # Expect the Hessian matrix is positive definite, i.e., no NA standard errors
-  
-  # Efficient matrix inversion applied
-  adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, dt=dt, 
-					Y=Y, lam=1, nu=5.),
-                              parameters=init_param,
-                              random = "x",
-                              DLL = "fastr_TMBExports", 
-                              silent = T)
-  mod_fit_eff <- nlminb(adfun_eff$par, adfun_eff$fn, adfun_eff$gr) # optimization
-  rep_eff <- TMB::sdreport(adfun_eff) # get Hessian
-  expect_equal(mod_fit_eff$convergence, 0) # Expect convergence indicator is 0, i.e., nlminb has converged
-  expect_true(rep_eff$pdHess)
+  fit_eff_2step <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, woodbury=TRUE,
+			     method="2step", init=init_param, silent=TRUE,
+			     simplified=FALSE, lam=1, nu=5.)
+  expect_equal(fit_eff_2step$env$nlminb_fit$convergence, 0)
+  expect_true(fit_eff_2step$env$tmb_report$pdHess)
+})
+
+
+test_that("Factor model works for a single neuron.",{
+  k <- 0.4
+  alpha <- 1.2
+  dt <- 0.05
+  n_bin <- 2000
+  n_trial <- 5
+  data <- simdata(dt, n_bin, n_trial, alpha, k)
+  Y <- data$Y
+  init_param <- list(log_k = -2,
+                     log_a = 0,
+                     x = prop_paths(Y, dt, -2, 0))
+  fit <- fastr_fit(data=Y, dt=dt, simplified=F)
+  expect_equal(fit$env$nlminb_fit$convergence, 0)
+  expect_true(fit$env$tmb_report$pdHess)
 })

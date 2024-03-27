@@ -2,6 +2,7 @@
 
 #define TMB_LIB_INIT R_init_fastr_TMBExports
 #include <TMB.hpp>
+#include "factor_model_basis.hpp"
 #include "factor_model_eff.hpp"
 #include "factor_model_parallel.hpp"
 #include "factor_model.hpp"
@@ -10,7 +11,9 @@
 template<class Type>
 Type objective_function<Type>::operator() () {
   DATA_STRING(model);
-  if(model == "factor_model_eff") {
+  if(model == "factor_model_basis") {
+    return factor_model_basis(this);
+  } else if(model == "factor_model_eff") {
     return factor_model_eff(this);
   } else if(model == "factor_model_parallel") {
     return factor_model_parallel(this);

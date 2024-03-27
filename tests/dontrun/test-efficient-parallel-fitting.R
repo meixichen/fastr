@@ -1,3 +1,7 @@
+# Check the following:
+# 1. does the parallel model produce correct nll
+# 2. how much the parallel model is faster
+
 set.seed(123)
 require(TMB)
 #require(fastr)
@@ -44,7 +48,7 @@ adfun_bigparallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam
                                  random = "x",
                                  DLL = mod_name1,
                                  silent = F)
-adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor, 
+adfun_eff <- TMB::MakeADFun(data=list(model="factor_model_eff", n_factor=n_factor,
 				      dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
@@ -55,7 +59,7 @@ adfun_parallel <- TMB::MakeADFun(data=list(n_factor=n_factor, dt=dt, Y=Y, lam=1,
                                  random = "x",
                                  DLL = mod_name2,
                                  silent = F)
-adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor, 
+adfun_serial<- TMB::MakeADFun(data=list(model="factor_model", n_factor=n_factor,
 					dt=dt, Y=Y, lam=1, nu=5.),
                                  parameters=init_param,
                                  random = "x",
