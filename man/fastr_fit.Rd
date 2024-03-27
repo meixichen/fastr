@@ -12,11 +12,12 @@ fastr_fit(
   method = "2step",
   lam = NULL,
   nu = 15,
-  woodbury = T,
-  silent = F,
-  adfun_only = F,
-  simplified = T,
+  woodbury = TRUE,
+  silent = FALSE,
+  adfun_only = FALSE,
+  simplified = TRUE,
   control = list(eval.max = 500, iter.max = 500),
+  ignore_random = FALSE,
   ...
 )
 }
@@ -66,6 +67,9 @@ purposes only.}
 saves 80 times more space.}
 
 \item{control}{A list of control parameters to pass to \code{nlminb()}.}
+
+\item{ignore_random}{Ignore random effect? If TRUE, latent paths are not integrated
+out in the model. This can be helpful for checking the marginal likelihood.}
 
 \item{...}{Additional arguments to be passed to the optimization function
 \code{nlminb()}}
