@@ -1,93 +1,120 @@
-set.seed(123)
-require(dplyr)
+require(tidyverse)
 require(dtw)
+require(ggpubr)
+set.seed(123)
 #-------- Simulate data -----------------
 dt <- 0.005
 n_bin <- 400
-n_cell <- 8
-n_factor <- 2
+n_cell <- 16
+n_factor <- 4
 n_trial <- 3
 k <- runif(n_cell, 0.1, 0.6)
 alpha <- runif(n_cell, 2, 5.5)
 l1 <- runif(n_cell, 0.1, 0.25)
 l2 <- runif(n_cell, 0.1, 0.25)
-l1[1:(n_cell/2)] <- runif(n_cell/2, 0.7, 0.95)
-l2[(n_cell/2+1):n_cell] <- runif(n_cell/2, 0.7, 0.95)
-L <- cbind(l1, l2)
+l3 <- runif(n_cell, 0.1, 0.25)
+l4 <- runif(n_cell, 0.1, 0.25)
+l1[1:(n_cell/n_factor)] <- runif(n_cell/n_factor, 0.7, 0.95)
+l2[(n_cell/n_factor+1):(n_cell/n_factor*2)] <- runif(n_cell/n_factor, 0.7, 0.95)
+l3[(n_cell/n_factor*2+1):(n_cell/n_factor*3)] <- runif(n_cell/n_factor, 0.7, 0.95)
+l4[(n_cell/n_factor*3+1):(n_cell)] <- runif(n_cell/n_factor, 0.7, 0.95)
+L <- cbind(l1, l2, l3, l4)
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
 
 #-------- Predict held-out neuron in the fitted time period -----------------
-test_cell <- 3
-# Fit the model to all data
-fit_all <- fastr_fit(data=Y, dt=dt, n_factor=2)
-Lam_hat <- fit_all$lmat_hat
-k_hat <- exp(fit_all$ig_params$log_k_hat)
-a_hat <- exp(fit_all$ig_params$log_a_hat)
-cov_hat <- Lam_hat %*% t(Lam_hat)
-diag(cov_hat) <- 1
-
-# Extract estimated paths
-X_hat <- array(fit_all$paths, dim=c(n_cell, n_bin, n_trial))
-dX_others <- apply(X_hat[-test_cell,,], MARGIN=c(1,3), function(x) c(x[1], diff(x)))
-dX_others <- aperm(dX_others, c(2, 1, 3))
-dXq_recov <- matrix(0, nrow=n_bin, ncol=n_trial)
-cond_coeff <- cov_hat[test_cell, -test_cell, drop=F]%*%
-  solve(cov_hat[-test_cell, -test_cell]) 
-dXq_mean <- a_hat[test_cell]*dt
-dX_others_mean <- a_hat[-test_cell]*dt
-for (t in 1:n_bin){
-  for (r in 1:n_trial){
-    dXq_recov[t, r] <- dXq_mean + cond_coeff %*% (dX_others[, t, r] - dX_others_mean)
-  }
-}
-Xq_recov <- apply(dXq_recov, 2, cumsum)
-# Recovered spikes per trial for the held-out neuron
-recovered_spks <- apply(Xq_recov, 2, 
-                        function(x){
-                          temp <- floor(x/k_hat[test_cell])
-                          temp[which(temp<0)] <- 0
-                          c(temp[1], diff(temp))
-                        })
-apply(recovered_spks, 2, sum) # Recovered total spike counts
-apply(Y[test_cell,,], 2, sum) # Observed total spike counts
-# Compare spike times
-obs_spk_times <- apply(Y[test_cell, , ], 2,
-                       bin2num, dt=dt)
-recov_spk_times <- apply(recovered_spks, 2,
-                         bin2num, dt=dt)
-par(mfrow=c(1,3))
-for (r in 1:n_trial){
-  obs <- obs_spk_times[[r]]
-  pred <- recov_spk_times[[r]]
-  plot(obs, col="blue", 
-       xlim=range(1, length(obs), length(pred)),
-       ylim=range(obs, pred), xlab="Spike index", ylab="Spike time") 
-  points(pred, col="red")
-  cat("Dynamic time warping distance between the two is", 
-      dtw(obs, pred)$normalizedDistance, "\n")
-}
-
-# Spike counts in bins
 get_spk_count <- function(binary_spk, bin_len){
   n_bin <- length(binary_spk)
   aggregate(binary_spk,
             list(cut(1:n_bin, (0:(n_bin/bin_len))*bin_len)),
             sum)[,2]
 }
-bin_len <- 20
-par(mfrow=c(1,3))
-for (r in 1:n_trial){
-  recov_spk_counts <- get_spk_count(recovered_spks[, r], bin_len)
-  obs_spk_counts <- get_spk_count(Y[test_cell, , r], bin_len)
-  plot(recov_spk_counts, ylim=range(recov_spk_counts, obs_spk_counts), 
-       type="l", col="red", 
-       xlab="Bin index", ylab="Spike count", main=paste("trial", r))
-  lines(obs_spk_counts, col="blue")
-  cat("Mean absolute error is", mean(abs(recov_spk_counts-obs_spk_counts)), "\n")
+
+leave_neuron_out_pred <- function(mod_fit, test_cell, bin_len=20){
+  n_factor <- mod_fit$env$n_factor
+  Lam_hat <- fit_all$lmat_hat
+  k_hat <- exp(fit_all$ig_params$log_k_hat)
+  a_hat <- exp(fit_all$ig_params$log_a_hat)
+  cov_hat <- Lam_hat %*% t(Lam_hat)
+  diag(cov_hat) <- 1
+  
+  # Extract estimated paths
+  X_hat <- array(fit_all$paths, dim=c(n_cell, n_bin, n_trial))
+  dX_others <- apply(X_hat[-test_cell,,], MARGIN=c(1,3), function(x) c(x[1], diff(x)))
+  dX_others <- aperm(dX_others, c(2, 1, 3))
+  dXq_recov <- matrix(0, nrow=n_bin, ncol=n_trial)
+  cond_coeff <- cov_hat[test_cell, -test_cell, drop=F]%*%
+    solve(cov_hat[-test_cell, -test_cell]) 
+  dXq_mean <- a_hat[test_cell]*dt
+  dX_others_mean <- a_hat[-test_cell]*dt
+  for (t in 1:n_bin){
+    for (r in 1:n_trial){
+      dXq_recov[t, r] <- dXq_mean + cond_coeff %*% (dX_others[, t, r, drop=FALSE] - dX_others_mean)
+    }
+  }
+  Xq_recov <- apply(dXq_recov, 2, cumsum)
+  # Recovered spikes per trial for the held-out neuron
+  recovered_spks <- apply(Xq_recov, 2, 
+                          function(x){
+                            temp <- floor(x/k_hat[test_cell])
+                            temp[which(temp<0)] <- 0
+                            c(temp[1], diff(temp))
+                          })
+  # Compare spike times using Dynamic Time Warping (DTW) distance
+  obs_spk_times <- apply(Y[test_cell, , ], 2,
+                         bin2num, dt=dt)
+  recov_spk_times <- apply(recovered_spks, 2,
+                           bin2num, dt=dt)
+  
+  mean_dtw_dist <- mean(sapply(1:n_trial, 
+                     function(r){dtw(obs_spk_times[[r]], 
+                                     recov_spk_times[[r]])$normalizedDistance}))
+  
+  recov_spk_counts <- apply(recovered_spks, 2, get_spk_count, bin_len=bin_len)
+  obs_spk_counts <- apply(Y[test_cell, , ], 2, get_spk_count, bin_len=bin_len)
+  mae_bin_count <- mean(sapply(1:n_trial,
+                          function(r){
+                            mean(abs(recov_spk_counts-
+                                 obs_spk_counts))
+                        }))
+  list(mean_dtw_dist=mean_dtw_dist, mae_bin_count=mae_bin_count,
+       recov_spk_times=recov_spk_times, recovered_spks=recovered_spks,
+       recov_spk_counts)
 }
 
+
+factor_test_list <- 2:6
+lno_results <- as.data.frame(expand.grid(n_factor=factor_test_list, test_cell=1:n_cell))
+lno_results$dtw_dist <- NA
+lno_results$mae_bin_count <- NA
+for (d in factor_test_list){
+  fit_d <- fastr_fit(data=Y, dt=dt, n_factor=d, silent = TRUE)
+  for (q in 1:n_cell){
+    result_dq <- leave_neuron_out_pred(fit_d, test_cell=q)
+    row_selected <- which(lno_results$n_factor==d & lno_results$test_cell==q)
+    lno_results$dtw_dist[row_selected] <- result_dq$mean_dtw_dist
+    lno_results$mae_bin_count[row_selected] <- result_dq$mae_bin_count
+  }
+}
+
+avg_lno_results <- lno_results %>% group_by(n_factor) %>% 
+  summarise(mean_dtw_dist=mean(dtw_dist),
+            mean_error_count=mean(mae_bin_count))
+avg_dtw_plot <- ggplot(avg_lno_results) + 
+  geom_line(aes(x=n_factor, y=mean_dtw_dist)) +
+  labs(x="Number of factors", y="MAE for binned spike counts")
+avg_error_plot <- ggplot(avg_lno_results) + 
+  geom_line(aes(x=n_factor, y=mean_error_count))+
+  labs(x="Number of factors", y="Mean of DTW distances between spike times")
+ggarrange(avg_dtw_plot, avg_error_plot)
+dtw_plot <- ggplot(lno_results) + 
+  geom_line(aes(x=n_factor, y=dtw_dist, color=as.factor(test_cell))) +
+  labs(x="Number of factors", y="MAE for binned spike counts")
+error_plot <- ggplot(lno_results) + 
+  geom_line(aes(x=n_factor, y=mae_bin_count, color=as.factor(test_cell)))+
+  labs(x="Number of factors", y="Mean of DTW distances between spike times")
+ggarrange(dtw_plot, error_plot)
 #-------- Predict held-out neuron in held-out time period ------------------
 test_cell <- 2
 # Fit the training data
@@ -123,7 +150,7 @@ dXq_mean <- a_train[test_cell]*dt
 dX_train_mean <- a_train[-test_cell]*dt
 for (t in 1:n_test){
   for (r in 1:n_trial){
-    dXq_pred[t, r] <- dXq_mean + cond_coeff %*% (dX_test[, t, r] - dX_train_mean)
+    dXq_pred[t, r] <- dXq_mean + cond_coeff %*% (dX_test[, t, r, drop=FALSE] - dX_train_mean)
   }
 }
 Xq_pred <- apply(dXq_pred, 2, cumsum)
@@ -161,7 +188,7 @@ bin_len <- 50
 par(mfrow=c(1,3))
 for (r in 1:n_trial){
   pred_spk_counts <- get_spk_count(pred_spks_test[, r], bin_len)
-  obs_spk_counts <- get_spk_count(Y[test_cell,(n_train+1):n_bin, r], bin_len)
+  obs_spk_counts <- get_spk_count(Y[test_cell,(n_train+1):n_bin, r, drop=FALSE], bin_len)
   plot(pred_spk_counts, ylim=range(pred_spk_counts, obs_spk_counts), 
        type="l", col="red", 
        xlab="Bin index", ylab="Spike count", main=paste("trial", r))
