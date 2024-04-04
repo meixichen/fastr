@@ -1,6 +1,7 @@
 require(tidyverse)
 require(dtw)
 require(ggpubr)
+require(MASS)
 set.seed(123)
 #-------- Simulate data -----------------
 dt <- 0.005
@@ -22,6 +23,46 @@ L <- cbind(l1, l2, l3, l4)
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
+
+#-------- PPD for held-out neuron in the fitted time period -----------------
+get_spk_times <- function(mod_fit, test_cell, test_trial,
+                          X_sam_mean, X_sam_sd, test_stat_fun=median){
+  n_bin <- mod_fit$env$n_bin
+  k_sam <- exp(rnorm(n=1, 
+                     mean=mod_fit$ig_params$log_k_hat[test_cell], 
+                     sd=mod_fit$ig_params$logk_se[test_cell]))
+  X_sam <- rnorm(n=n_bin, mean=X_sam_mean[test_cell,,test_trial],
+                 sd=X_sam_sd[test_cell,,test_trial])
+  temp <- floor(X_sam/k_sam)
+  temp[which(temp<0)] <- 0
+  spk_bin_ind <- sapply(1:max(temp),
+                        function(u){
+                          which(temp==u)[1]
+                        })
+  test_stat_fun(spk_bin_ind[!is.na(spk_bin_ind)])
+}
+fit_d <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, silent = TRUE)
+X_sam_mean <- array(fit_d$paths, c(n_cell, n_bin, n_trial))
+X_sam_sd <- array(fit_d$paths_se, c(n_cell, n_bin, n_trial))
+test_cells <- sample(1:16, 3)
+test_trials <- 1:3
+n_sam <- 1e4
+
+par(mfrow=c(3, 3))
+for (test_cell in test_cells){
+  for (test_trial in test_trials){
+    test_T <- rep(0, n_sam)
+    for (i in 1:n_sam){
+      test_T[i] <- get_spk_times(fit_d, test_cell, test_trial, 
+                                 X_sam_mean, X_sam_sd)  
+    }
+    obs_T <- median(which(Y[test_cell,,test_trial]==1))*dt
+    hist(test_T*dt, 
+         main=paste("Neuron", test_cell, "Trial", test_trial,
+                    "p =", mean(test_T*dt < obs_T)))
+    abline(v=obs_T, col="red")
+  }
+}
 
 #-------- Predict held-out neuron in the fitted time period -----------------
 get_spk_count <- function(binary_spk, bin_len){
