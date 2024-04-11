@@ -1,7 +1,7 @@
 #' @rdname fastr_fit
 #' @export
 fastr_model <- function(data, dt, n_factor, init=NULL, method="2step",
-			lam=NULL, nu=15, woodbury=TRUE, ignore_random=FALSE,
+			lam=NULL, nu=15, woodbury=TRUE, integrate_random=TRUE,
 			...){
   if (length(dim(data))==3){ # multiple neurons
     n_cell <- dim(data)[1]
@@ -83,10 +83,10 @@ fastr_model <- function(data, dt, n_factor, init=NULL, method="2step",
                  lam=as.double(lam), nu=as.double(nu))
   }
 
-  if (ignore_random){
-    random <- NULL
-  } else {
+  if (integrate_random){
     random <- "x"
+  } else {
+    random <- NULL
   }
   out <- list(data=data, init_param=init_param, map=map, random=random,
 	      n_cell=n_cell, n_bin=n_bin, n_trial=n_trial, all_mle=all_mle)

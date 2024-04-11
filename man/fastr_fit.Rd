@@ -18,7 +18,7 @@ fastr_fit(
   adfun_only = FALSE,
   simplified = TRUE,
   control = list(eval.max = 500, iter.max = 500),
-  ignore_random = FALSE,
+  integrate_random = TRUE,
   ...
 )
 
@@ -31,7 +31,7 @@ fastr_model(
   lam = NULL,
   nu = 15,
   woodbury = TRUE,
-  ignore_random = FALSE,
+  integrate_random = TRUE,
   ...
 )
 }
@@ -82,8 +82,8 @@ saves 80 times more space.}
 
 \item{control}{A list of control parameters to pass to \code{nlminb()}.}
 
-\item{ignore_random}{Ignore random effect? If TRUE, latent paths are not integrated
-out in the model. This can be helpful for checking the marginal likelihood.}
+\item{integrate_random}{Integrate random effects? If TRUE, latent paths are integrated
+out in the model. Setting to FALSE can be helpful for checking the marginal likelihood.}
 
 \item{...}{Additional arguments to be passed to the optimization function
 \code{nlminb()}}

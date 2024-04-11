@@ -34,8 +34,8 @@
 #' @param simplified Should a simplified output be given? If true, the output
 #' saves 80 times more space.
 #' @param control A list of control parameters to pass to `nlminb()`.
-#' @param ignore_random Ignore random effect? If TRUE, latent paths are not integrated
-#' out in the model. This can be helpful for checking the marginal likelihood.
+#' @param integrate_random Integrate random effects? If TRUE, latent paths are integrated
+#' out in the model. Setting to FALSE can be helpful for checking the marginal likelihood.
 #' @param ... Additional arguments to be passed to the optimization function
 #' `nlminb()`
 #' @details If the spike train data comes in the form of spike times, it can be
@@ -62,12 +62,12 @@
 
 fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, nu=15,
 		   woodbury=TRUE, silent=FALSE, adfun_only=FALSE, simplified=TRUE,
-		   control=list(eval.max=500, iter.max=500), ignore_random=FALSE, ...){
+		   control=list(eval.max=500, iter.max=500), integrate_random=TRUE, ...){
 
   if (missing(n_factor)) n_factor <- 1
   model <- fastr_model(data=data, dt=dt, n_factor=n_factor, init=init,
 		       method=method, lam=lam, nu=nu, woodbury=woodbury,
-		       ignore_random=ignore_random)
+		       integrate_random=integrate_random)
 
   if (!silent) cat("Building the ADFun...\n")
   adfun <- TMB::MakeADFun(data=model$data,

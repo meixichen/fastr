@@ -29,14 +29,14 @@ test_that("Factor models in C++ has same nll as the nll computed in R. ",{
     # Efficient matrix inversion not applied
     adfun <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, lam=1, nu=5., init=init_param,
 		       woodbury=FALSE, method="joint", silent=TRUE, adfun_only=TRUE,
-		       ignore_random=TRUE)
+		       integrate_random=FALSE)
     nll_tmb <- adfun$fn(unlist(init_param)) # negative log-likelihood computed by TMB/C++
     expect_equal(nll_tmb, nll_r)
 
     # Efficient matrix inversion applied
     adfun_eff <- fastr_fit(data=Y, dt=dt, n_factor=n_factor, lam=1, nu=5., init=init_param,
 			   woodbury=TRUE, method="joint", silent=TRUE, adfun_only=TRUE,
-			   ignore_random=TRUE)
+			   integrate_random=FALSE)
     nll_tmb_eff <- adfun_eff$fn(unlist(init_param))
     expect_equal(nll_tmb_eff, nll_r)
   }
