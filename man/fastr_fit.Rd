@@ -17,6 +17,7 @@ fastr_fit(
   silent = FALSE,
   adfun_only = FALSE,
   simplified = TRUE,
+  report_sd = TRUE,
   control = list(eval.max = 500, iter.max = 500),
   integrate_random = TRUE,
   ...
@@ -79,6 +80,9 @@ purposes only.}
 
 \item{simplified}{Should a simplified output be given? If true, the output
 saves 80 times more space.}
+
+\item{report_sd}{Should the standard errors be calculated? Default is TRUE,
+which runs TMB::sdreport() on the fitted model object.}
 
 \item{control}{A list of control parameters to pass to \code{nlminb()}.}
 

@@ -33,6 +33,8 @@
 #' purposes only.
 #' @param simplified Should a simplified output be given? If true, the output
 #' saves 80 times more space.
+#' @param report_sd Should the standard errors be calculated? Default is TRUE,
+#' which runs TMB::sdreport() on the fitted model object.
 #' @param control A list of control parameters to pass to `nlminb()`.
 #' @param integrate_random Integrate random effects? If TRUE, latent paths are integrated
 #' out in the model. Setting to FALSE can be helpful for checking the marginal likelihood.
@@ -62,6 +64,7 @@
 
 fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, nu=15,
 		   woodbury=TRUE, silent=FALSE, adfun_only=FALSE, simplified=TRUE,
+		   report_sd=TRUE,
 		   control=list(eval.max=500, iter.max=500), integrate_random=TRUE, ...){
 
   if (missing(n_factor)) n_factor <- 1
@@ -80,8 +83,14 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
     start_t <- Sys.time()
     fit <- nlminb(adfun$par, adfun$fn, adfun$gr, control=control)
     time_nlminb <- difftime(Sys.time(), start_t, units="secs")
-    if (!silent) cat("Finished optimization. Starting sdreport...\n")
-    rep <- TMB::sdreport(adfun, getJointPrecision = TRUE)
+    if (report_sd){
+      if (!silent) cat("Finished optimization. Starting sdreport...\n")
+      rep <- TMB::sdreport(adfun, getJointPrecision = TRUE)
+      paths_se <- sqrt(rep$diag.cov.random)
+    } else{
+      rep <- NULL
+      paths_se <- NULL
+    }
     time_sdrep <- difftime(Sys.time(), start_t, units="secs") - time_nlminb
     all_mle <- model$all_mle
     rate_hat <- all_mle$gamma
@@ -111,7 +120,8 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
     else{
       lmat_hat <- get_FA_estim(fit, n_cell=n_cell, n_factor=n_factor)$L
       lmat_varimax <- varimax(lmat_hat)$loadings[1:n_cell,]
-      lmat_unnorm_hat <- rep$par.fixed[which(names(rep$par.fixed)=="Lt")]
+      #lmat_unnorm_hat <- rep$par.fixed[which(names(rep$par.fixed)=="Lt")]
+      lmat_unnorm_hat <- fit$par[which(names(fit$par)=="Lt")]
       lmat_unnorm_cov <- rep$cov.fixed[which(colnames(rep$cov.fixed)=="Lt"),
        				     which(colnames(rep$cov.fixed)=="Lt")]
     }
@@ -139,7 +149,7 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
 		lmat_unnorm_hat = lmat_unnorm_hat,
 		lmat_unnorm_cov = lmat_unnorm_cov,
 		paths = rep$par.random,
-		paths_se = sqrt(rep$diag.cov.random),
+		paths_se = paths_se,
 		env = env)
     class(out) <- "fastr_fit"
     if (simplified) out <- simplify_output(out)
@@ -224,6 +234,7 @@ simplify_output <- function(fobj, ...){
   env <- list(start_time = fobj$env$start_time,
               time_nlminb = fobj$env$time_nlminb,
               time_sdrep = fobj$env$time_sdrep,
+	      nlminb_fit = fobj$env$nlminb_fit,
               n_factor = fobj$env$n_factor,
               n_cell = fobj$env$n_cell,
               n_bin = fobj$env$n_bin,
