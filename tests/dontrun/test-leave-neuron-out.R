@@ -2,8 +2,9 @@ require(tidyverse)
 require(dtw)
 require(ggpubr)
 require(MASS)
-set.seed(123)
+require(TMB)
 #-------- Simulate data -----------------
+set.seed(123)
 dt <- 0.005
 n_bin <- 400
 n_cell <- 16
@@ -23,6 +24,68 @@ L <- cbind(l1, l2, l3, l4)
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
+
+#-------- PPD using TMB ----------------------
+get_spk_times_from_path <- function(path, k){
+  temp <- floor(path/k)
+  temp[which(temp<0)] <- 0
+  spk_bin_ind <- sapply(1:max(temp),
+                        function(u){
+                          which(temp==u)[1]
+                        })
+  spk_bin_ind
+}
+mod_name <- "factor_model_ppd"
+compile(paste0(mod_name, ".cpp"))
+dyn.load(dynlib(mod_name))
+
+# Check if the cpp template gives the same results as the fastr hpp template
+pkg_template_params <- fastr_model(data=Y, dt=dt, n_factor=n_factor, ignore_random = TRUE)
+pkg_template <- fastr_fit(data=Y, dt=dt, n_factor=n_factor,
+                          init=pkg_template_params$init_param, 
+                          adfun_only=TRUE, integrate_random = FALSE)
+
+ppd_template_test <- MakeADFun(data=list(n_factor=n_factor,
+                                    dt=dt,
+                                    Y=Y, lam=ifelse(n_cell<10, 1, 0.5),
+                                    nu=15, held_out_cell=0),
+                          parameters=pkg_template_params$init_param,
+                          map=pkg_template_params$map,
+                          DLL=mod_name)
+expect_equal(pkg_template$fn(pkg_template$par), ppd_template_test$fn(ppd_template_test$par))
+
+# First get parameter estimates
+mod_fit <- fastr_fit(data=Y, dt=dt, n_factor=n_factor,
+                     init=pkg_template_params$init_param, report_sd = FALSE, 
+                     simplified = F)
+theta_hat_list <- list(log_k=mod_fit$log_k_hat,
+                       log_a=mod_fit$log_a_hat,
+                       Lt=mod_fit$lmat_unnorm_hat)
+par_hat_list <- c(theta_hat_list, list(x=mod_fit$paths))
+# Construct a new template with a held-out neuron
+held_out_cell <- as.integer(4)
+ppd_template <- MakeADFun(data=list(n_factor=n_factor,
+                                    dt=dt,
+                                    Y=Y, lam=ifelse(n_cell<10, 1, 0.5),
+                                    nu=15, held_out_cell=held_out_cell),
+                          parameters=pkg_template_params$init_param,
+                          random="x",
+                          DLL=mod_name)
+# Test sdreport
+sdrep_pred <- sdreport(ppd_template, par.fixed=unlist(theta_hat_list))
+x_ppd <- array(sdrep_pred$par.random, c(n_cell,n_bin,n_trial))
+spk_probs <- matrix(sdrep_pred$value[1201:2400], nrow=n_bin, ncol=n_trial)
+# Plot predicted path
+plot(x_ppd[held_out_cell,,3], type="l", col="red")
+lines(x[held_out_cell,,3], col="green")
+legend("topleft", legend=c("Predicted path", "True path"),
+       col=c("red", "green"), lty=c(1,1))
+# Plot predicted spiking probabilities
+plot(spk_probs[,1], type="l")
+
+# Predicted versus observed spike times (in terms of bin index)
+get_spk_times_from_path(x_ppd[held_out_cell,,1], exp(theta_hat_list$log_k[held_out_cell]))
+which(Y[held_out_cell,,1]==1)
 
 #-------- PPD for held-out neuron in the fitted time period -----------------
 get_spk_times <- function(mod_fit, test_cell, test_trial,
