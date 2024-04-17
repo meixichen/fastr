@@ -60,24 +60,29 @@ Type objective_function<Type>::operator() (){
   }
 
   // matrix<Type> Sig = latent_nll.cov();
-
+  SIMULATE{
   matrix<Type> x_exceed(n_bin, n_trial);
   matrix<Type> y_pred(n_bin, n_trial);
-  matrix<Type> spk_prob(n_bin, n_trial);
-  Type Nt_pred=1;
+  //matrix<Type> spk_prob(n_bin, n_trial);
+  Type Nt_pred;
   if (held_out_ind >= Type(0)){
     for (int u=0;u<n_trial;u++){
+      Nt_pred = 1;
       for (int j=0;j<n_bin;j++){
-        x_exceed(j,u) = x(held_out_ind, j, u) - Nt_pred * k(held_out_ind);
-        spk_prob(j,u) = pow(Type(1.) + exp(-nu*x_exceed(j,u)), Type(-1.));
-	y_pred(j,u) = (x_exceed(j,u) >= 0);
-        Nt_pred += y_pred(j,u);
+        x_exceed(j,u) = x(held_out_ind, j, u) - Nt_pred * k[held_out_ind];
+        //spk_prob(j,u) = pow(Type(1.) + exp(-nu*x_exceed(j,u)), Type(-1.));
+	if (x_exceed(j,u) >= 1e-9){
+	  y_pred(j,u) = Type(1);
+          Nt_pred += 1;
+	} else{
+	  y_pred(j,u) = Type(0);
+	}
       }
     }
   }
-  ADREPORT(x_exceed);
-  ADREPORT(spk_prob);
+  REPORT(x_exceed);
   REPORT(y_pred);
+  }
   return nll;
 
 }

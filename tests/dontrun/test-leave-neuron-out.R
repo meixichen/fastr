@@ -1,3 +1,4 @@
+devtools::load_all()
 require(tidyverse)
 require(dtw)
 require(ggpubr)
@@ -40,7 +41,7 @@ compile(paste0(mod_name, ".cpp"))
 dyn.load(dynlib(mod_name))
 
 # Check if the cpp template gives the same results as the fastr hpp template
-pkg_template_params <- fastr_model(data=Y, dt=dt, n_factor=n_factor, ignore_random = TRUE)
+pkg_template_params <- fastr_model(data=Y, dt=dt, n_factor=n_factor)
 pkg_template <- fastr_fit(data=Y, dt=dt, n_factor=n_factor,
                           init=pkg_template_params$init_param, 
                           adfun_only=TRUE, integrate_random = FALSE)
@@ -55,36 +56,110 @@ ppd_template_test <- MakeADFun(data=list(n_factor=n_factor,
 expect_equal(pkg_template$fn(pkg_template$par), ppd_template_test$fn(ppd_template_test$par))
 
 # First get parameter estimates
-mod_fit <- fastr_fit(data=Y, dt=dt, n_factor=n_factor,
-                     init=pkg_template_params$init_param, report_sd = FALSE, 
-                     simplified = F)
+# mod_fit <- fastr_fit(data=Y, dt=dt, n_factor=n_factor,
+#                      init=pkg_template_params$init_param, report_sd = TRUE,
+#                      simplified = F)
+# saveRDS(mod_fit, "mod_fit.rds")
+mod_fit <- readRDS("mod_fit.rds")
 theta_hat_list <- list(log_k=mod_fit$log_k_hat,
                        log_a=mod_fit$log_a_hat,
                        Lt=mod_fit$lmat_unnorm_hat)
-par_hat_list <- c(theta_hat_list, list(x=mod_fit$paths))
 # Construct a new template with a held-out neuron
-held_out_cell <- as.integer(4)
+held_out_cell <- as.integer(6)
+Y_train <- Y
+Y_train[held_out_cell,,] <- matrix(NA, nrow=n_bin, ncol=n_trial)
+init_params_train <- pkg_template_params$init_param
+init_params_train$x[held_out_cell,,] <- init_params_train$x[1,,]
 ppd_template <- MakeADFun(data=list(n_factor=n_factor,
                                     dt=dt,
-                                    Y=Y, lam=ifelse(n_cell<10, 1, 0.5),
+                                    Y=Y_train, lam=ifelse(n_cell<10, 1, 0.5),
                                     nu=15, held_out_cell=held_out_cell),
-                          parameters=pkg_template_params$init_param,
+                          parameters=init_params_train,
                           random="x",
                           DLL=mod_name)
+
+# Prepare mean and var of fixed effect posterior
+fixed_mean <- unlist(theta_hat_list)
+fixed_cov <- matrix(0, nrow=length(fixed_mean), ncol=length(fixed_mean))
+fixed_cov[1:(2*n_cell), 1:(2*n_cell)] <- mod_fit$marg_cov
+fixed_cov[(2*n_cell+1):nrow(fixed_cov), (2*n_cell+1):nrow(fixed_cov)] <- mod_fit$lmat_unnorm_cov
+# PPD sampling
+n_iter <- 1000
+test_T_fun <- function(spk_times){quantile(spk_times, probs=c(0.25, 0.5, 0.75))}
+test_T_mat <- matrix(NA, nrow=3, ncol=n_iter*n_trial)
+for (iter in 1:n_iter){
+  fixed_sample <- mvtnorm::rmvnorm(
+    n = 1,
+    mean = fixed_mean,
+    sigma = fixed_cov)
+  nll <- ppd_template$fn(drop(fixed_sample))
+  random_sample <- rlang::with_env(ppd_template$env, last.par[lrandom()])
+  spk_time_sample <- apply(ppd_template$simulate()$y_pred, 2, 
+                           function(y) which(y==1))
+  test_T <- sapply(spk_time_sample, test_T_fun)
+  test_T_mat[, (3*iter-2):(3*iter)] <- test_T
+}
+par(mfrow=c(3,3))
+hist(test_T_mat[1, seq(1,3000,by=3)], xlim=c(60, 120))
+abline(v=quantile(which(Y[held_out_cell,,1]==1), 0.25),col="red")
+hist(test_T_mat[1, seq(2,3000,by=3)], xlim=c(60, 120))
+abline(v=quantile(which(Y[held_out_cell,,2]==1), 0.25),col="blue")
+hist(test_T_mat[1, seq(3,3000,by=3)], xlim=c(60, 120))
+abline(v=quantile(which(Y[held_out_cell,,3]==1), 0.25),col="green")
+hist(test_T_mat[2, seq(1,3000,by=3)], xlim=c(170,220))
+abline(v=quantile(which(Y[held_out_cell,,1]==1), 0.5),col="red")
+hist(test_T_mat[2, seq(2,3000,by=3)])
+abline(v=quantile(which(Y[held_out_cell,,2]==1), 0.5),col="blue")
+hist(test_T_mat[2, seq(3,3000,by=3)])
+abline(v=quantile(which(Y[held_out_cell,,3]==1), 0.5),col="green")
+hist(test_T_mat[3, seq(1,3000,by=3)], xlim=c(290,340))
+abline(v=quantile(which(Y[held_out_cell,,1]==1), 0.75),col="red")
+hist(test_T_mat[3, seq(2,3000,by=3)])
+abline(v=quantile(which(Y[held_out_cell,,2]==1), 0.75),col="blue")
+hist(test_T_mat[3, seq(3,3000,by=3)])
+abline(v=quantile(which(Y[held_out_cell,,3]==1), 0.75),col="green")
+
 # Test sdreport
 sdrep_pred <- sdreport(ppd_template, par.fixed=unlist(theta_hat_list))
 x_ppd <- array(sdrep_pred$par.random, c(n_cell,n_bin,n_trial))
+x_exceeds <- matrix(sdrep_pred$value[1:1200], nrow=n_bin, ncol=n_trial)
 spk_probs <- matrix(sdrep_pred$value[1201:2400], nrow=n_bin, ncol=n_trial)
 # Plot predicted path
-plot(x_ppd[held_out_cell,,3], type="l", col="red")
-lines(x[held_out_cell,,3], col="green")
-legend("topleft", legend=c("Predicted path", "True path"),
-       col=c("red", "green"), lty=c(1,1))
-# Plot predicted spiking probabilities
-plot(spk_probs[,1], type="l")
+par(mfrow=c(2, n_trial))
+for (u in 1:n_trial){
+  plot(x_ppd[held_out_cell,,u], type="l", col="red", 
+       main="Red: predicted\n Green: true")
+  lines(x[held_out_cell,,u], col="green")
+}
+for (u in 1:n_trial){
+  obs_spks_ind <- which(Y[held_out_cell,,u]==1)
+  plot(x_exceeds[,u], type="l")
+  points(obs_spks_ind, rep(0, length(obs_spks_ind)), pch="|", col="red")
+}
+
+# Reset the predicted path using the estimated k_held_out
+x_pred_reset <- matrix(0, nrow=n_bin, ncol=n_trial)
+k_pred  <- exp(theta_hat_list$log_k[held_out_cell])
+for (u in 1:n_trial){
+  N_pred <- 1
+  for (j in 1:n_bin){
+    x_pred_reset[j, u] <- x_ppd[held_out_cell, j, u] - N_pred * k_pred
+    N_pred <- N_pred + (x_pred_reset[j, u] >= 0)
+  }
+}
+par(mfrow=c(1,n_trial))
+for (u in 1:n_trial){
+  obs_spks_ind <- which(Y[held_out_cell,,u]==1)
+  plot(x_pred_reset[,u], type="l")
+  points(obs_spks_ind, rep(0, length(obs_spks_ind)), pch="|", col="red")
+}
 
 # Predicted versus observed spike times (in terms of bin index)
+# Output by resetting the estimated x path for the held-out neuron
 get_spk_times_from_path(x_ppd[held_out_cell,,1], exp(theta_hat_list$log_k[held_out_cell]))
+# Output from c++
+which(diff(x_ppd[held_out_cell,,1]-x_exceeds[,1])!=0) 
+# Truth
 which(Y[held_out_cell,,1]==1)
 
 #-------- PPD for held-out neuron in the fitted time period -----------------
