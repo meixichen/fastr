@@ -7,21 +7,21 @@ require(TMB)
 #-------- Simulate data -----------------
 set.seed(123)
 dt <- 0.005
-n_bin <- 400
-n_cell <- 16
-n_factor <- 4
+n_bin <- 1000
+n_cell <- 12
+n_factor <- 3
 n_trial <- 3
 k <- runif(n_cell, 0.1, 0.6)
 alpha <- runif(n_cell, 2, 5.5)
 l1 <- runif(n_cell, 0.1, 0.25)
 l2 <- runif(n_cell, 0.1, 0.25)
 l3 <- runif(n_cell, 0.1, 0.25)
-l4 <- runif(n_cell, 0.1, 0.25)
+#l4 <- runif(n_cell, 0.1, 0.25)
 l1[1:(n_cell/n_factor)] <- runif(n_cell/n_factor, 0.7, 0.95)
 l2[(n_cell/n_factor+1):(n_cell/n_factor*2)] <- runif(n_cell/n_factor, 0.7, 0.95)
 l3[(n_cell/n_factor*2+1):(n_cell/n_factor*3)] <- runif(n_cell/n_factor, 0.7, 0.95)
-l4[(n_cell/n_factor*3+1):(n_cell)] <- runif(n_cell/n_factor, 0.7, 0.95)
-L <- cbind(l1, l2, l3, l4)
+#l4[(n_cell/n_factor*3+1):(n_cell)] <- runif(n_cell/n_factor, 0.7, 0.95)
+L <- cbind(l1, l2, l3)
 sim <- simdata(dt=dt, n_bin=n_bin, n_trial=n_trial, alpha=alpha, k=k, L=L)
 Y <- sim$Y
 x <- sim$x
@@ -76,7 +76,7 @@ ppd_template <- MakeADFun(data=list(n_factor=n_factor,
                                     nu=15, held_out_cell=held_out_cell),
                           parameters=init_params_train,
                           random="x",
-                          DLL=mod_name)
+                          DLL=mod_name, silent = TRUE)
 
 # Prepare mean and var of fixed effect posterior
 fixed_mean <- unlist(theta_hat_list)
@@ -84,40 +84,83 @@ fixed_cov <- matrix(0, nrow=length(fixed_mean), ncol=length(fixed_mean))
 fixed_cov[1:(2*n_cell), 1:(2*n_cell)] <- mod_fit$marg_cov
 fixed_cov[(2*n_cell+1):nrow(fixed_cov), (2*n_cell+1):nrow(fixed_cov)] <- mod_fit$lmat_unnorm_cov
 # PPD sampling
+calc_psth <- function(binary_spks, bin_size=10){
+  n_bin <- length(binary_spks)
+  aggregate(binary_spks, 
+            list(cut(1:n_bin, (0:(n_bin/bin_size))*bin_size, right = TRUE)), 
+            sum)[,2]
+}
 n_iter <- 1000
-test_T_fun <- function(spk_times){quantile(spk_times, probs=c(0.25, 0.5, 0.75))}
-test_T_mat <- matrix(NA, nrow=3, ncol=n_iter*n_trial)
+bi_spk_samples <- matrix(0, nrow=n_bin, ncol=n_trial*n_iter)
 for (iter in 1:n_iter){
+  cat("Sampling iteration:", iter, "\n")
   fixed_sample <- mvtnorm::rmvnorm(
     n = 1,
     mean = fixed_mean,
     sigma = fixed_cov)
   nll <- ppd_template$fn(drop(fixed_sample))
   random_sample <- rlang::with_env(ppd_template$env, last.par[lrandom()])
-  spk_time_sample <- apply(ppd_template$simulate()$y_pred, 2, 
-                           function(y) which(y==1))
-  test_T <- sapply(spk_time_sample, test_T_fun)
-  test_T_mat[, (3*iter-2):(3*iter)] <- test_T
+  bi_spk_samples[, (iter*n_trial-n_trial+1):(iter*n_trial)] <- ppd_template$simulate()$y_pred
 }
-par(mfrow=c(3,3))
-hist(test_T_mat[1, seq(1,3000,by=3)], xlim=c(60, 120))
-abline(v=quantile(which(Y[held_out_cell,,1]==1), 0.25),col="red")
-hist(test_T_mat[1, seq(2,3000,by=3)], xlim=c(60, 120))
-abline(v=quantile(which(Y[held_out_cell,,2]==1), 0.25),col="blue")
-hist(test_T_mat[1, seq(3,3000,by=3)], xlim=c(60, 120))
-abline(v=quantile(which(Y[held_out_cell,,3]==1), 0.25),col="green")
-hist(test_T_mat[2, seq(1,3000,by=3)], xlim=c(170,220))
-abline(v=quantile(which(Y[held_out_cell,,1]==1), 0.5),col="red")
-hist(test_T_mat[2, seq(2,3000,by=3)])
-abline(v=quantile(which(Y[held_out_cell,,2]==1), 0.5),col="blue")
-hist(test_T_mat[2, seq(3,3000,by=3)])
-abline(v=quantile(which(Y[held_out_cell,,3]==1), 0.5),col="green")
-hist(test_T_mat[3, seq(1,3000,by=3)], xlim=c(290,340))
-abline(v=quantile(which(Y[held_out_cell,,1]==1), 0.75),col="red")
-hist(test_T_mat[3, seq(2,3000,by=3)])
-abline(v=quantile(which(Y[held_out_cell,,2]==1), 0.75),col="blue")
-hist(test_T_mat[3, seq(3,3000,by=3)])
-abline(v=quantile(which(Y[held_out_cell,,3]==1), 0.75),col="green")
+
+bin_size <- 10
+psth_rep_bounds <- matrix(0, nrow=n_bin/bin_size, ncol=n_trial*2)
+colnames(psth_rep_bounds) <- apply(expand.grid(c("lower", "upper"), 1:n_trial), 1, paste, collapse="_")
+for (u in 1:n_trial){
+  psth_u <- sapply(1:n_iter, 
+         function(iter) calc_psth(bi_spk_samples[,iter*n_trial-(n_trial-u)], bin_size=bin_size))
+  psth_rep_bounds[, paste(c("lower", "upper"), u, sep = "_")] <- t(apply(psth_u, 1, range))
+}
+par(mfrow=c(3,1))
+for (u in 1:n_trial){
+  obs_psth <- calc_psth(Y[held_out_cell,,u], bin_size = bin_size)
+  rep_psth <- psth_rep_bounds[, paste(c("lower", "upper"), u, sep = "_")]
+  cover_percent <- mean(sapply(1:length(obs_psth), 
+                               function(ii) {between(obs_psth[ii], rep_psth[ii,1], rep_psth[ii,2])}))
+  plot(obs_psth, ylim=range(obs_psth, rep_psth), 
+       main=paste("Trial", u, "Cover%:", cover_percent),
+       ylab="Spike count", xlab="Bin index", col="red", type="l", lwd=2)
+  polygon(c(1:length(obs_psth), length(obs_psth):1), c(rep_psth[,1], rev(rep_psth[,2])),
+          col = adjustcolor("gray", alpha.f=0.5), border=FALSE)
+}
+
+# Cumulative spike count graphical GOF test
+cum_spk_sample <- apply(bi_spk_samples, 2, cumsum)
+cum_spk_obs <- apply(Y[held_out_cell,,], 2, cumsum)
+par(mfrow=c(1,3))
+for (u in 1:n_trial){
+  plim <- range(cum_spk_sample[,u],cum_spk_obs[,u])
+  plot(cum_spk_sample[,u], cum_spk_obs[,u], 
+       xlim=plim, ylim=plim, type="l", 
+       col=adjustcolor("gray", alpha.f=0.5),
+       xlab="Replicated cumulative spike count",
+       ylab="Observed cumulative spike count", main=paste("Trial", u))
+  for (iter in seq(u, n_trial*100, by=3)){
+    lines(cum_spk_sample[,iter], cum_spk_obs[,u], 
+          col=adjustcolor("gray", alpha.f=0.5))
+  }
+  abline(0, 1, col="green", lty="dashed", lwd=3)
+}
+
+# Examples of bad alignment
+par(mfrow=c(2,3))
+match_trial_df <- cbind(c(1,2,3,2,3,1), c(2,3,1,1,2,3))
+for (u in 1:nrow(match_trial_df)){
+  plim <- range(cum_spk_sample[,match_trial_df[u,1]], cum_spk_obs[,match_trial_df[u,2]])
+  plot(cum_spk_sample[,match_trial_df[u,1]], cum_spk_obs[,match_trial_df[u,2]], 
+       xlim=plim, ylim=plim, type="l", 
+       col=adjustcolor("gray", alpha.f=0.5),
+       xlab="Replicated cumulative spike count",
+       ylab="Observed cumulative spike count", 
+       main=paste("Obs from trial", match_trial_df[u,2], "\n",
+                  "Rep from trial", match_trial_df[u,1]))
+  for (iter in seq(match_trial_df[u,1], n_trial*n_iter, by=3)){
+    lines(cum_spk_sample[,iter], cum_spk_obs[,match_trial_df[u,2]], 
+          col=adjustcolor("gray", alpha.f=0.5))
+  }
+  abline(0, 1, col="green", lty="dashed", lwd=3)
+}
+
 
 # Test sdreport
 sdrep_pred <- sdreport(ppd_template, par.fixed=unlist(theta_hat_list))
