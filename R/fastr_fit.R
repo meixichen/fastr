@@ -66,7 +66,10 @@ fastr_fit <- function(data, dt, n_factor, init=NULL, method="2step", lam=NULL, n
 		   woodbury=TRUE, silent=FALSE, adfun_only=FALSE, simplified=TRUE,
 		   report_sd=TRUE,
 		   control=list(eval.max=500, iter.max=500), integrate_random=TRUE, ...){
-
+  data_dim <- dim(data)
+  n_cell <- data_dim[1]
+  n_bin <- data_dim[2]
+  n_trial <- data_dim[3]
   if (missing(n_factor)) n_factor <- 1
   model <- fastr_model(data=data, dt=dt, n_factor=n_factor, init=init,
 		       method=method, lam=lam, nu=nu, woodbury=woodbury,
