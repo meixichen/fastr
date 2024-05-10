@@ -27,6 +27,25 @@ Y <- sim$Y
 x <- sim$x
 
 #-------- PPD using TMB ----------------------
+#' Sample from a multivariate normal with sparse precision matrix.
+#'
+#' @param n Number of random draws.
+#' @param mean Mean vector.
+#' @param prec Sparse precision matrix, i.e., inheriting from [Matrix::sparseMatrix] or its Cholesky factor, i.e., inheriting from [Matrix::CHMfactor].
+#'
+#' @return A matrix with `n` rows, each of which is a draw from the corresponding normal distribution.
+#'
+#' @details If the matrix is provided in precision form, it is converted to Cholesky form using `Matrix::Cholesky(prec, super = TRUE)`.  Once it is of form [Matrix::CHMfactor], this function is essentially copied from local function `rmvnorm()` in function `MC()` defined in [TMB::MakeADFun()].
+rmvn_prec <- function(n, mean, prec) {
+  d <- ncol(prec) # number of mvn dimensions
+  if(!is(prec, "CHMfactor")) {
+    prec <- Matrix::Cholesky(prec, super = TRUE)
+  }
+  u <- matrix(rnorm(d*n),d,n)
+  u <- Matrix::solve(prec,u,system="Lt")
+  u <- Matrix::solve(prec,u,system="Pt")
+  u <- t(as(u, "matrix") + mean)
+}
 get_spk_times_from_path <- function(path, k){
   temp <- floor(path/k)
   temp[which(temp<0)] <- 0
@@ -84,13 +103,7 @@ fixed_cov <- matrix(0, nrow=length(fixed_mean), ncol=length(fixed_mean))
 fixed_cov[1:(2*n_cell), 1:(2*n_cell)] <- mod_fit$marg_cov
 fixed_cov[(2*n_cell+1):nrow(fixed_cov), (2*n_cell+1):nrow(fixed_cov)] <- mod_fit$lmat_unnorm_cov
 # PPD sampling
-calc_psth <- function(binary_spks, bin_size=10){
-  n_bin <- length(binary_spks)
-  aggregate(binary_spks, 
-            list(cut(1:n_bin, (0:(n_bin/bin_size))*bin_size, right = TRUE)), 
-            sum)[,2]
-}
-n_iter <- 1000
+n_iter <- 100
 bi_spk_samples <- matrix(0, nrow=n_bin, ncol=n_trial*n_iter)
 for (iter in 1:n_iter){
   cat("Sampling iteration:", iter, "\n")
@@ -99,30 +112,48 @@ for (iter in 1:n_iter){
     mean = fixed_mean,
     sigma = fixed_cov)
   nll <- ppd_template$fn(drop(fixed_sample))
-  random_sample <- rlang::with_env(ppd_template$env, last.par[lrandom()])
-  bi_spk_samples[, (iter*n_trial-n_trial+1):(iter*n_trial)] <- ppd_template$simulate()$y_pred
+  X_mean <- rlang::with_env(ppd_template$env, last.par[lrandom()])
+  X_prec <- rlang::with_env(ppd_template$env, L.created.by.newton)
+  X_sam <- rmvn_prec(1, X_mean, X_prec)
+  yi_sam <- matrix(0, nrow=n_bin, ncol=n_trial)
+  for (tr in 1:n_trial){
+    Xi_sam <- X_sam[, 
+                    seq(held_out_cell+(n_cell*n_bin*(tr-1)), n_cell*n_bin*tr, by=n_cell)]
+    temp <- rep(0, n_bin)
+    temp[get_spk_times_from_path(Xi_sam, exp(fixed_sample[held_out_cell]))] <- 1
+    yi_sam[,tr] <- temp
+  }
+  bi_spk_samples[, (iter*n_trial-n_trial+1):(iter*n_trial)] <- yi_sam
+  #bi_spk_samples[, (iter*n_trial-n_trial+1):(iter*n_trial)] <- ppd_template$simulate()$y_pred
 }
 
-bin_size <- 10
-psth_rep_bounds <- matrix(0, nrow=n_bin/bin_size, ncol=n_trial*2)
-colnames(psth_rep_bounds) <- apply(expand.grid(c("lower", "upper"), 1:n_trial), 1, paste, collapse="_")
-for (u in 1:n_trial){
-  psth_u <- sapply(1:n_iter, 
-         function(iter) calc_psth(bi_spk_samples[,iter*n_trial-(n_trial-u)], bin_size=bin_size))
-  psth_rep_bounds[, paste(c("lower", "upper"), u, sep = "_")] <- t(apply(psth_u, 1, range))
-}
-par(mfrow=c(3,1))
-for (u in 1:n_trial){
-  obs_psth <- calc_psth(Y[held_out_cell,,u], bin_size = bin_size)
-  rep_psth <- psth_rep_bounds[, paste(c("lower", "upper"), u, sep = "_")]
-  cover_percent <- mean(sapply(1:length(obs_psth), 
-                               function(ii) {between(obs_psth[ii], rep_psth[ii,1], rep_psth[ii,2])}))
-  plot(obs_psth, ylim=range(obs_psth, rep_psth), 
-       main=paste("Trial", u, "Cover%:", cover_percent),
-       ylab="Spike count", xlab="Bin index", col="red", type="l", lwd=2)
-  polygon(c(1:length(obs_psth), length(obs_psth):1), c(rep_psth[,1], rev(rep_psth[,2])),
-          col = adjustcolor("gray", alpha.f=0.5), border=FALSE)
-}
+# # Check PSTH from replicated data
+# calc_psth <- function(binary_spks, bin_size=10){
+#   n_bin <- length(binary_spks)
+#   aggregate(binary_spks, 
+#             list(cut(1:n_bin, (0:(n_bin/bin_size))*bin_size, right = TRUE)), 
+#             sum)[,2]
+# }
+# bin_size <- 10
+# psth_rep_bounds <- matrix(0, nrow=n_bin/bin_size, ncol=n_trial*2)
+# colnames(psth_rep_bounds) <- apply(expand.grid(c("lower", "upper"), 1:n_trial), 1, paste, collapse="_")
+# for (u in 1:n_trial){
+#   psth_u <- sapply(1:n_iter, 
+#          function(iter) calc_psth(bi_spk_samples[,iter*n_trial-(n_trial-u)], bin_size=bin_size))
+#   psth_rep_bounds[, paste(c("lower", "upper"), u, sep = "_")] <- t(apply(psth_u, 1, range))
+# }
+# par(mfrow=c(3,1))
+# for (u in 1:n_trial){
+#   obs_psth <- calc_psth(Y[held_out_cell,,u], bin_size = bin_size)
+#   rep_psth <- psth_rep_bounds[, paste(c("lower", "upper"), u, sep = "_")]
+#   cover_percent <- mean(sapply(1:length(obs_psth), 
+#                                function(ii) {between(obs_psth[ii], rep_psth[ii,1], rep_psth[ii,2])}))
+#   plot(obs_psth, ylim=range(obs_psth, rep_psth), 
+#        main=paste("Trial", u, "Cover%:", cover_percent),
+#        ylab="Spike count", xlab="Bin index", col="red", type="l", lwd=2)
+#   polygon(c(1:length(obs_psth), length(obs_psth):1), c(rep_psth[,1], rev(rep_psth[,2])),
+#           col = adjustcolor("gray", alpha.f=0.5), border=FALSE)
+# }
 
 # Cumulative spike count graphical GOF test
 cum_spk_sample <- apply(bi_spk_samples, 2, cumsum)
@@ -135,8 +166,24 @@ for (u in 1:n_trial){
        col=adjustcolor("gray", alpha.f=0.5),
        xlab="Replicated cumulative spike count",
        ylab="Observed cumulative spike count", main=paste("Trial", u))
-  for (iter in seq(u, n_trial*100, by=3)){
+  for (iter in seq(u, n_trial*100, by=n_trial)){
     lines(cum_spk_sample[,iter], cum_spk_obs[,u], 
+          col=adjustcolor("gray", alpha.f=0.5))
+  }
+  abline(0, 1, col="green", lty="dashed", lwd=3)
+}
+
+## Change Y-axis to also replication
+par(mfrow=c(1,3))
+for (u in 1:n_trial){
+  plim <- range(cum_spk_sample[,u])
+  plot(cum_spk_sample[,u], cum_spk_sample[,u], 
+       xlim=plim, ylim=plim, type="l", 
+       col=adjustcolor("gray", alpha.f=0.5),
+       xlab="Replicated cumulative spike count",
+       ylab="Replicated cumulative spike count", main=paste("Trial", u))
+  for (iter in seq(u, n_trial*100, by=n_trial)){
+    lines(cum_spk_sample[,iter], cum_spk_sample[,u], 
           col=adjustcolor("gray", alpha.f=0.5))
   }
   abline(0, 1, col="green", lty="dashed", lwd=3)
