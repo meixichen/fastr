@@ -14,6 +14,7 @@ Type factor_model_eff(objective_function<Type>* obj){
   DATA_ARRAY(Y); //  q x n x r array of 0s and 1s.
   DATA_SCALAR(lam); // regularization parameter
   DATA_SCALAR(nu); // sigmoid function scale parameter
+  DATA_INTEGER(held_out_cell); // index of the neuron to be held out. If zero, all are included.
 
   // parameters
   PARAMETER_VECTOR(log_k); // log thresholds (k>0)
@@ -29,6 +30,7 @@ Type factor_model_eff(objective_function<Type>* obj){
   int n_bin = Y_dim(1); // number of time bins
   int n_trial = Y_dim(2); // number of trials
   Type nu_x; // nu*x
+  int held_out_ind = held_out_cell-1; // convert to cpp index that starts from 0
 
   // transformed parameters
   vector<Type> k = exp(log_k);
@@ -52,10 +54,11 @@ Type factor_model_eff(objective_function<Type>* obj){
     auto start = std::chrono::high_resolution_clock::now();
     for(int j=0;j<n_bin;j++){
       for (int i=0;i<n_cell;i++){
-        //nll -= dbinom_robust(Y(i,j,u), Type(1), x(i,j,u) - Nt[i] * k[i], true);
-        nu_x = nu * (x(i,j,u) - Nt[i] * k[i]);
-        nll -= Y(i,j,u) * nu_x - log(1 + exp(nu_x)); // log Bernoulli dens with sigmoid prob
-        Nt(i) += Y(i,j,u);
+        if (i != held_out_ind){
+          nu_x = nu * (x(i,j,u) - Nt[i] * k[i]);
+          nll -= Y(i,j,u) * nu_x - log(1 + exp(nu_x)); // log Bernoulli dens with sigmoid prob
+          Nt(i) += Y(i,j,u);
+        }
       }
     }
     auto stop = std::chrono::high_resolution_clock::now();
@@ -66,6 +69,28 @@ Type factor_model_eff(objective_function<Type>* obj){
 
   matrix<Type> Sig = latent_nll.cov();
   ADREPORT(Sig);
+  
+  SIMULATE{
+    matrix<Type> x_exceed(n_bin, n_trial);
+    matrix<Type> y_pred(n_bin, n_trial);
+    Type Nt_pred;
+    if (held_out_ind >= Type(0)){
+      for (int u=0;u<n_trial;u++){
+        Nt_pred = 1;
+        for (int j=0;j<n_bin;j++){
+          x_exceed(j,u) = x(held_out_ind, j, u) - Nt_pred * k[held_out_ind];
+          if (x_exceed(j,u) >= 1e-9){
+            y_pred(j,u) = Type(1);
+            Nt_pred += 1;
+          } else{
+            y_pred(j,u) = Type(0);
+          }
+        }
+      }
+    }
+    REPORT(x_exceed);
+    REPORT(y_pred);
+  }
   return nll;
 
 }
