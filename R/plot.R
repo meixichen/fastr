@@ -134,3 +134,112 @@ rasterplot <- function(data, pch = "|", pt_cex = 0.9, ...){
   }
 }
 
+
+#' Observed versus predicted cumulative spike counts as as graphical GOF test
+#'
+#' @param obs Length `n_bin` vector of observed spikes, where each element is
+#' a binary indicator of whether a spike has occurred in that bin. 
+#' @param pred `n_bin x n_sample` matrix of predicted spikes. Each column 
+#' corresponds to a sample from the leave-neuron-out posterior predictive 
+#' distribution, obtained using [fastr::leave_one_out_prediction()].
+#' @param add_average Add the average of all lines?
+#' @param xlab X-axis label.
+#' @param ylab Y-axis label.
+#' @param title Optional. 
+#' @param alpha_line Transparency for color of the lines.
+#' @param ... Additional arguments to the `plot()` function.
+#' @return Plot whose the X-axis corresponds to the observed 
+#' cumulative spike count and Y-axis corresponds to the predicted cumulative  
+#' spike counts. The counts are joined by lines, with each dot plotting the 
+#' predicted cumulative spike count from the LNO-PP distribution against 
+#' the observed value.
+#' If `add_average=TRUE`, a red line corresponding to average of all lines is 
+#' added to the plot.
+#' @export
+plot_gof_spk_csum <- function(obs, pred, add_average=TRUE,
+                              xlab="Observed cumulative spike count",
+                              ylab="Predicted cumulative spike count",
+                              title="", alpha_line=0.5, ...){
+  cum_spk_obs <- cumsum(obs)
+  cum_spk_sample <- apply(pred, 2, cumsum)
+  n_sample <- dim(pred)[2]
+  plim <- range(as.vector(cum_spk_sample), cum_spk_obs)
+  plot(cum_spk_obs, cum_spk_sample[,1], 
+       xlim=plim, ylim=plim, type="l", 
+       col=adjustcolor("gray", alpha.f=alpha_line),
+       xlab=xlab, ylab=ylab,main=title, ...)
+  avg_rep <- apply(cum_spk_sample, 1, mean)
+  for (iter in 2:n_sample){
+    lines(cum_spk_obs, cum_spk_sample[,iter],
+          col=adjustcolor("gray", alpha.f=alpha_line))
+  }
+  abline(0, 1, col="green", lty="dashed", lwd=2)
+  if (add_average) lines(cum_spk_obs, avg_rep, col="red", lwd=2)
+}
+
+#' Observed spike time vs histogram of predicted spike times as a graphical GOF test
+#' 
+#' @param obs Length `n_bin` vector of observed spikes, where each element is
+#' a binary indicator of whether a spike has occurred in that bin. 
+#' @param pred `n_bin x n_sample` matrix of predicted spikes. Each column 
+#' corresponds to a sample from the leave-neuron-out posterior predictive 
+#' distribution, obtained using [fastr::leave_one_out_prediction()].
+#' @param dt Scalar time scale of the spike trains. I.e., what is the length of 
+#' each bin in secs.
+#' @param spk_ind A vector of integers \eqn{I_1,\ldots,I_N}. The spike times for
+#' each of the \eqn{I_n}-th spike are plotted. If not supplied, 4 spikes are 
+#' randomly selected.
+#' @param plot_type "density" or "hist"?
+#' @return A ggplot object of histogram or density plot.
+#' @export
+plot_gof_spk_times <- function(obs, pred, dt,
+                               spk_ind=NULL, plot_type=c("density", "hist")){
+  require(ggplot2)
+  require(dplyr)
+  plot_type <- match.arg(plot_type)
+  n_sam <- dim(pred)[2]
+  obs_spk_times <- which(obs==1)*dt
+  pred_spk_times <- apply(pred, 2, function(x) which(x==1)*dt)
+  min_spk_count <- min(c(length(obs_spk_times), sapply(pred_spk_times, length)))
+  if (is.null(spk_ind)){
+    n_ind <- min(min_spk_count, 4)
+    spk_ind <- sort(sample(1:min_spk_count, n_ind))
+  } else{
+    if (all(spk_ind, is.integer) && (max(spk_ind) < min_spk_count)){
+      n_ind <- length(spk_ind)
+    } else{
+      stop("`spk_ind` must be all integers and its largest value should
+           not exceed the minimum spike count in `pred`.")
+    }
+  }
+  
+  spk_df <- data.frame(spike_time=obs_spk_times[spk_ind], 
+                       spike_index=as.factor(spk_ind),
+                       type=rep("Observed", n_ind))
+  pred_spk_times_mat <- sapply(spk_ind, 
+                              function(spk_ind){
+                                sapply(pred_spk_times, function(rep) rep[spk_ind])
+                              })
+  spk_df <- rbind(spk_df,
+                  data.frame(spike_time=as.vector(pred_spk_times_mat),
+                             spike_index=as.factor(rep(spk_ind, each=n_sam)),
+                             type=rep("Predicted", n_ind*n_sam)))
+
+  if (plot_type=="density"){
+    ggobj <- spk_df %>% filter(type=="Predicted") %>%
+      ggplot(aes(x=spike_time, color=spike_index)) + 
+      geom_density() +
+      guides(color=guide_legend(title="Spike index"))
+  } else{
+    ggobj <- spk_df %>% filter(type=="Predicted") %>%
+      ggplot(aes(x=spike_time, color=spike_index, fill=spike_index)) + 
+      geom_histogram() +
+      guides(color="none", fill=guide_legend(title="Spike index"))
+  }
+    ggobj +
+    geom_vline(data=spk_df%>%filter(type=="Observed"), 
+               aes(xintercept=spike_time, color=spike_index), linetype="dotdash")+
+    facet_grid(spike_index~.) +
+    xlab("Spike time (in sec)")
+}
+
