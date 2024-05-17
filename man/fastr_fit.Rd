@@ -32,6 +32,7 @@ fastr_model(
   lam = NULL,
   nu = 15,
   woodbury = TRUE,
+  left_out_neuron = 0,
   integrate_random = TRUE,
   ...
 )
