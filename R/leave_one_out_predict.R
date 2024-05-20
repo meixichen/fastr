@@ -65,6 +65,13 @@ leave_one_out_predict <- function(mod_fit, left_out_neuron, data,
   n_trial <- mod_fit$env$n_trial
   dt <- mod_fit$env$dt
   
+  log_k_list <- mod_fit$log_k_hat
+  log_a_list <- mod_fit$log_a_hat
+  if (is.null(log_k_list)){
+    log_k_list <- mod_fit$ig_params$log_k_hat
+    log_a_list <- mod_fit$ig_params$log_a_hat
+  } 
+  
   # Build cov.fixed and par.fixed
   cov1 <- mod_fit$marg_cov
   cov2 <- mod_fit$lmat_unnorm_cov
@@ -73,7 +80,7 @@ leave_one_out_predict <- function(mod_fit, left_out_neuron, data,
     cov_fixed <- cov2
   }
   else{ # the model template takes in both Lambda and marginal parameters
-    par_fixed <- c(mod_fit$log_k_hat, mod_fit$log_a_hat, mod_fit$lmat_unnorm_hat)
+    par_fixed <- c(log_k_list, log_a_list, mod_fit$lmat_unnorm_hat)
     if (is.null(cov1)){ 
       # if marg_cov is not in the output, get SEs to cov 
       # but corr between log_a and log_k is lost
@@ -122,7 +129,7 @@ leave_one_out_predict <- function(mod_fit, left_out_neuron, data,
         X_sam <- rmvn_prec(1, X_mean, X_prec)
         yi_sam <- matrix(0, nrow=n_bin, ncol=n_trial)
         k_est <- ifelse(fix_marg_param, 
-                        exp(mod_fit$log_k_hat[left_out_neuron]), 
+                        exp(log_k_list[left_out_neuron]), 
                         exp(fixed_sample[left_out_neuron]))#FIX: NOT get k by position
         for (tr in 1:n_trial){
           Xi_sam <- X_sam[, seq(left_out_neuron+(n_cell*n_bin*(tr-1)), 
@@ -161,7 +168,7 @@ leave_one_out_predict <- function(mod_fit, left_out_neuron, data,
         X_sam <- joint_sam[, which(colnames(joint_sam)=="x")]
         yi_sam <- matrix(0, nrow=n_bin, ncol=n_trial)
         k_est <- ifelse(fix_marg_param, 
-                        exp(mod_fit$log_k_hat[left_out_neuron]), 
+                        exp(log_k_list[left_out_neuron]), 
                         exp(joint_sam[, left_out_neuron])) #FIX: NOT get k by position
         for (tr in 1:n_trial){
           Xi_sam <- X_sam[seq(left_out_neuron+(n_cell*n_bin*(tr-1)), 
