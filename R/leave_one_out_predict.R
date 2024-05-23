@@ -80,18 +80,21 @@ leave_one_out_predict <- function(mod_fit, left_out_neuron, data,
     cov_fixed <- cov2
   }
   else{ # the model template takes in both Lambda and marginal parameters
-    par_fixed <- c(log_k_list, log_a_list, mod_fit$lmat_unnorm_hat)
-    if (is.null(cov1)){ 
-      # if marg_cov is not in the output, get SEs to cov 
-      # but corr between log_a and log_k is lost
-      cov1 <- diag(mod_fit$ig_params$loga_se, mod_fit$ig_params$logk_se)^2
-    }
-    #cov_fixed <- rbind(cbind(cov1,matrix(0,nrow=nrow(cov1),ncol=ncol(cov2))),
-    #                   cbind(matrix(0,nrow=nrow(cov2),ncol=ncol(cov1)),cov2))
-    cov_fixed <- matrix(0, nrow=length(par_fixed), ncol=length(par_fixed))
-    cov_fixed[1:(2*n_cell), 1:(2*n_cell)] <- cov1
-    cov_fixed[(2*n_cell+1):nrow(cov_fixed), 
-              (2*n_cell+1):nrow(cov_fixed)] <- cov2
+    if ("tmb_report" %in% mod_fit$env){
+      cov_fixed <- mod_fit$env$tmb_report$cov.fixed
+      par_fixed <- mod_fit$env$tmb_report$par.fixed
+    } else{
+      par_fixed <- c(log_k_list, log_a_list, mod_fit$lmat_unnorm_hat)
+      if (is.null(cov1)){ 
+        # if marg_cov is not in the output, get SEs to cov 
+        # but corr between log_a and log_k is lost
+        cov1 <- diag(mod_fit$ig_params$loga_se, mod_fit$ig_params$logk_se)^2
+      }
+      cov_fixed <- matrix(0, nrow=length(par_fixed), ncol=length(par_fixed))
+      cov_fixed[1:(2*n_cell), 1:(2*n_cell)] <- cov1
+      cov_fixed[(2*n_cell+1):nrow(cov_fixed), 
+                (2*n_cell+1):nrow(cov_fixed)] <- cov2
+    } 
   }
   
   # Build a new adfun obj for prediction without the left-out neuron data
