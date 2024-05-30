@@ -184,8 +184,12 @@ plot_gof_spk_csum <- function(obs, pred, add_average=TRUE,
 #' @param pred `n_bin x n_sample` matrix of predicted spikes. Each column 
 #' corresponds to a sample from the leave-neuron-out posterior predictive 
 #' distribution, obtained using [fastr::leave_one_out_prediction()].
+#' Alternatively, a length `n_sample` list of predicted spike times can be 
+#' provided. 
 #' @param dt Scalar time scale of the spike trains. I.e., what is the length of 
 #' each bin in secs.
+#' If spike times are provided for `pred`, make sure they are the same time scale
+#' as `dt`.
 #' @param spk_ind A vector of integers \eqn{I_1,\ldots,I_N}. The spike times for
 #' each of the \eqn{I_n}-th spike are plotted. If not supplied, 4 spikes are 
 #' randomly selected.
@@ -197,15 +201,24 @@ plot_gof_spk_times <- function(obs, pred, dt,
   require(ggplot2)
   require(dplyr)
   plot_type <- match.arg(plot_type)
-  n_sam <- dim(pred)[2]
   obs_spk_times <- which(obs==1)*dt
-  pred_spk_times <- apply(pred, 2, function(x) which(x==1)*dt)
+  if (is.matrix(pred)){
+    pred_spk_times <- apply(pred, 2, function(x) which(x==1)*dt)
+    n_sam <- dim(pred)[2]
+  } else if (is.list(pred)){
+    pred_spk_times <- pred
+    n_sam <- length(pred)
+  } else{
+    stop("`pred` argument should be either a `n_bin x n_sample`  
+         or a length `n_sample` list of spike times.")
+  }
+  
   min_spk_count <- min(c(length(obs_spk_times), sapply(pred_spk_times, length)))
   if (is.null(spk_ind)){
     n_ind <- min(min_spk_count, 4)
     spk_ind <- sort(sample(1:min_spk_count, n_ind))
   } else{
-    if (all(spk_ind, is.integer) && (max(spk_ind) < min_spk_count)){
+    if (all(sapply(spk_ind, is.integer)) && (max(spk_ind) < min_spk_count)){
       n_ind <- length(spk_ind)
     } else{
       stop("`spk_ind` must be all integers and its largest value should
@@ -225,19 +238,21 @@ plot_gof_spk_times <- function(obs, pred, dt,
                              spike_index=as.factor(rep(spk_ind, each=n_sam)),
                              type=rep("Predicted", n_ind*n_sam)))
 
+  spk_df_pred <- spk_df[spk_df$type=="Predicted",]
+  spk_df_obs <- spk_df[spk_df$type=="Observed",]
   if (plot_type=="density"){
-    ggobj <- spk_df %>% filter(type=="Predicted") %>%
-      ggplot(aes(x=spike_time, color=spike_index)) + 
+    ggobj <-
+      ggplot(data=spk_df_pred, aes(x=spike_time, color=spike_index)) + 
       geom_density() +
       guides(color=guide_legend(title="Spike index"))
   } else{
-    ggobj <- spk_df %>% filter(type=="Predicted") %>%
-      ggplot(aes(x=spike_time, color=spike_index, fill=spike_index)) + 
+    ggobj <- ggplot(data=spk_df_pred, 
+                    aes(x=spike_time, color=spike_index, fill=spike_index)) + 
       geom_histogram() +
       guides(color="none", fill=guide_legend(title="Spike index"))
   }
     ggobj +
-    geom_vline(data=spk_df%>%filter(type=="Observed"), 
+    geom_vline(data=spk_df_obs, 
                aes(xintercept=spike_time, color=spike_index), linetype="dotdash")+
     facet_grid(spike_index~.) +
     xlab("Spike time (in sec)")
