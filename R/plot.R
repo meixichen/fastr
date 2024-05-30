@@ -194,10 +194,13 @@ plot_gof_spk_csum <- function(obs, pred, add_average=TRUE,
 #' each of the \eqn{I_n}-th spike are plotted. If not supplied, 4 spikes are 
 #' randomly selected.
 #' @param plot_type "density" or "hist"?
+#' @param grid_plot Plot spike time histogram/density plots in different grid 
+#' cells for different spike indices? Default is FALSE.
 #' @return A ggplot object of histogram or density plot.
 #' @export
 plot_gof_spk_times <- function(obs, pred, dt,
-                               spk_ind=NULL, plot_type=c("density", "hist")){
+                               spk_ind=NULL, plot_type=c("density", "hist"),
+                               grid_plot=FALSE){
   require(ggplot2)
   require(dplyr)
   plot_type <- match.arg(plot_type)
@@ -251,10 +254,14 @@ plot_gof_spk_times <- function(obs, pred, dt,
       geom_histogram() +
       guides(color="none", fill=guide_legend(title="Spike index"))
   }
-    ggobj +
-    geom_vline(data=spk_df_obs, 
-               aes(xintercept=spike_time, color=spike_index), linetype="dotdash")+
-    facet_grid(spike_index~.) +
-    xlab("Spike time (in sec)")
+    ggobj <- ggobj +
+      geom_vline(data=spk_df_obs,
+                 aes(xintercept=spike_time, color=spike_index), 
+                 linetype="dotdash")+
+      xlab("Spike time (in sec)")
+    if (grid_plot){
+      ggobj <- ggobj + facet_grid(spike_index~.) 
+    }
+    ggobj
 }
 
