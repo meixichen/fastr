@@ -120,7 +120,7 @@ rasterplot <- function(data, pch = "|", pt_cex = 0.9, ...){
   }
   else if (is.list(data)){
     n_trials <- length(data)
-    x_max <- max(sapply(data, max)) # The max value of x-axis
+    x_max <- max(vapply(data, max, numeric(1))) # The max value of x-axis
     plot(NULL, NULL, xlim=c(0,ceiling(x_max)), ylim=c(1,n_trials),
          xlab="Time", ...)
     for (i in 1:n_trials){
@@ -217,12 +217,14 @@ plot_gof_spk_times <- function(obs, pred, dt,
          or a length `n_sample` list of spike times.")
   }
   
-  min_spk_count <- min(c(length(obs_spk_times), sapply(pred_spk_times, length)))
+  min_spk_count <- min(c(length(obs_spk_times), 
+                         vapply(pred_spk_times, length, numeric(1))))
   if (is.null(spk_ind)){
     n_ind <- min(min_spk_count, 4)
     spk_ind <- sort(sample(1:min_spk_count, n_ind))
   } else{
-    if (all(sapply(spk_ind, is.integer)) && (max(spk_ind) < min_spk_count)){
+    if (all(vapply(spk_ind, is.integer, TRUE)) && 
+        (max(spk_ind) < min_spk_count)){
       n_ind <- length(spk_ind)
     } else{
       stop("`spk_ind` must be all integers and its largest value should
@@ -233,10 +235,11 @@ plot_gof_spk_times <- function(obs, pred, dt,
   spk_df <- data.frame(spike_time=obs_spk_times[spk_ind], 
                        spike_index=as.factor(spk_ind),
                        type=rep("Observed", n_ind))
-  pred_spk_times_mat <- sapply(spk_ind, 
-                              function(spk_ind){
-                                sapply(pred_spk_times, function(rep) rep[spk_ind])
-                              })
+  pred_spk_times_mat <- vapply(spk_ind, 
+                               function(spk_ind){
+                                 vapply(pred_spk_times, 
+                                        function(rep){rep[spk_ind]}, numeric(1))
+                                 }, FUN.VALUE=as.numeric(seq_len(n_sam)))
   spk_df <- rbind(spk_df,
                   data.frame(spike_time=as.vector(pred_spk_times_mat),
                              spike_index=as.factor(rep(spk_ind, each=n_sam)),
@@ -271,9 +274,10 @@ plot_gof_spk_times <- function(obs, pred, dt,
   
   if (pvals){
     pvals <- rep(0, length(spk_ind))
-    for (ind in spk_ind){
-      pvals[ind] <- mean(spk_df_pred$spike_time[spk_df_pred$spike_inde==ind] > 
-                           spk_df_obs$spike_time[spk_df_obs$spike_index==ind])
+    for (i in seq_along(spk_ind)){
+      ind <- spk_ind[i]
+      pvals[i] <- mean(spk_df_pred$spike_time[spk_df_pred$spike_index==ind] >
+                         spk_df_obs$spike_time[spk_df_obs$spike_index==ind])
     }
     list(plot=ggobj, pvals=pvals)
   } else{
