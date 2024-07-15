@@ -5,12 +5,12 @@
 
 #undef TMB_OBJECTIVE_PTR
 #define TMB_OBJECTIVE_PTR obj
-  
+
 template<class Type>
 Type factor_model_eff(objective_function<Type>* obj){
   // data inputs
-  DATA_INTEGER(n_factor); // number of factors 
-  DATA_SCALAR(dt); // length of the time bin 
+  DATA_INTEGER(n_factor); // number of factors
+  DATA_SCALAR(dt); // length of the time bin
   DATA_ARRAY(Y); //  q x n x r array of 0s and 1s.
   DATA_SCALAR(lam); // regularization parameter
   DATA_SCALAR(nu); // sigmoid function scale parameter
@@ -21,7 +21,7 @@ Type factor_model_eff(objective_function<Type>* obj){
   PARAMETER_VECTOR(log_a); // log drift (0<drift<1)
   PARAMETER_VECTOR(Lt); // dq-d(d-1)/2 vector of the lower triangular elements of L (by column)
   PARAMETER_ARRAY(x); // q x n x r neuron paths
- 
+
   using namespace density;
   using namespace fastr;
   // transformed data
@@ -37,7 +37,7 @@ Type factor_model_eff(objective_function<Type>* obj){
   vector<Type> alpha = exp(log_a);
   // negative log-likelihood computation
   MVN_FA<Type> latent_nll(Lt, n_cell, n_factor, dt); // efficiently compute density of MVN using the Woodbury formula
-  vector<Type> reg = Lt*Lt; // l2 (ridge) regularization 
+  vector<Type> reg = Lt*Lt; // l2 (ridge) regularization
   Type nll = lam*(reg.sum()); // negative log-likelihood penalization term
   vector<Type> mu(n_cell); // drift vector
   vector<Type> Nt(n_cell); // count the number of spikes up to and including time t for each neuron
@@ -51,7 +51,6 @@ Type factor_model_eff(objective_function<Type>* obj){
     }
     Nt.fill(1);
 
-    auto start = std::chrono::high_resolution_clock::now();
     for(int j=0;j<n_bin;j++){
       for (int i=0;i<n_cell;i++){
         if (i != held_out_ind){
@@ -61,15 +60,11 @@ Type factor_model_eff(objective_function<Type>* obj){
         }
       }
     }
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
-    std::cout << "Data likelihood evaluation took (in ms): " << std::endl;
-    std::cout << duration.count() << std::endl;
   }
 
   matrix<Type> Sig = latent_nll.cov();
   ADREPORT(Sig);
-  
+
   SIMULATE{
     matrix<Type> x_exceed(n_bin, n_trial);
     matrix<Type> y_pred(n_bin, n_trial);
