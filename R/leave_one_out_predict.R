@@ -88,7 +88,7 @@ leave_one_out_predict <- function(mod_fit, left_out_neuron, data,
       if (is.null(cov1)){ 
         # if marg_cov is not in the output, get SEs to cov 
         # but corr between log_a and log_k is lost
-        cov1 <- diag(mod_fit$ig_params$loga_se, mod_fit$ig_params$logk_se)^2
+        cov1 <- diag(c(mod_fit$ig_params$loga_se, mod_fit$ig_params$logk_se))^2
       }
       cov_fixed <- matrix(0, nrow=length(par_fixed), ncol=length(par_fixed))
       cov_fixed[1:(2*n_cell), 1:(2*n_cell)] <- cov1
